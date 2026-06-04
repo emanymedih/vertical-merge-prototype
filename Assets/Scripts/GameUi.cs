@@ -139,7 +139,7 @@ public sealed class GameUi : MonoBehaviour
         rect.sizeDelta = new Vector2(460f, 110f);
 
         var text = textObject.AddComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         text.fontSize = fontSize;
         text.alignment = alignment;
         text.color = color;
