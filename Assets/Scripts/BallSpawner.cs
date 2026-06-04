@@ -2,6 +2,8 @@ using UnityEngine;
 
 public sealed class BallSpawner : MonoBehaviour
 {
+    private const float MinimumDropInterval = 0.45f;
+
     private Camera gameCamera;
     private GameController controller;
     private SpriteRenderer previewRenderer;
@@ -13,6 +15,7 @@ public sealed class BallSpawner : MonoBehaviour
     private int nextLevel;
     private bool isDragging;
     private float nextDropTime;
+    private Ball lastDroppedBall;
     private Vector2 spawnPosition;
 
     public int NextLevel => nextLevel;
@@ -70,7 +73,7 @@ public sealed class BallSpawner : MonoBehaviour
 
         if (isDragging && released)
         {
-            if (Time.time >= nextDropTime)
+            if (CanDrop())
             {
                 DropCurrentBall();
             }
@@ -98,9 +101,9 @@ public sealed class BallSpawner : MonoBehaviour
 
     private void DropCurrentBall()
     {
-        var ball = controller.SpawnBall(nextLevel, spawnPosition);
-        ball.PlayPop();
-        nextDropTime = Time.time + 0.25f;
+        lastDroppedBall = controller.SpawnBall(nextLevel, spawnPosition);
+        lastDroppedBall.PlayPop();
+        nextDropTime = Time.time + MinimumDropInterval;
         GenerateNextBall();
     }
 
@@ -117,16 +120,27 @@ public sealed class BallSpawner : MonoBehaviour
     private void UpdatePreview()
     {
         SetPreviewVisible(true);
+        var canDrop = CanDrop();
         previewRenderer.transform.position = spawnPosition;
         previewRenderer.transform.localScale = Vector3.one * Ball.GetDiameter(nextLevel);
         var color = CircleSpriteCache.GetBallColor(nextLevel);
-        color.a = 0.72f;
+        color.a = canDrop ? 0.72f : 0.34f;
         previewRenderer.color = color;
 
         var guideHeight = Mathf.Max(0.1f, spawnPosition.y - guideBottomY);
         guideRenderer.transform.position = new Vector3(spawnPosition.x, guideBottomY + guideHeight * 0.5f, 0f);
         guideRenderer.transform.localScale = new Vector3(0.035f, guideHeight, 1f);
-        guideRenderer.color = new Color(color.r, color.g, color.b, isDragging ? 0.35f : 0.18f);
+        guideRenderer.color = new Color(color.r, color.g, color.b, canDrop ? (isDragging ? 0.35f : 0.18f) : 0.08f);
+    }
+
+    private bool CanDrop()
+    {
+        if (Time.time < nextDropTime)
+        {
+            return false;
+        }
+
+        return lastDroppedBall == null || lastDroppedBall.IsReadyForNextDrop(spawnY);
     }
 
     private float ClampSpawnX(float worldX)

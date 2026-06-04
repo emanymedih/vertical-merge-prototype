@@ -7,6 +7,8 @@ public sealed class Ball : MonoBehaviour
     private const float SpawnGraceSeconds = 1.25f;
     private const float SettledVelocity = 0.55f;
     private const float SettledAngularVelocity = 75f;
+    private const float NextDropVelocity = 1.05f;
+    private const float ForcedNextDropSeconds = 1.35f;
 
     private GameController controller;
     private Rigidbody2D body;
@@ -57,6 +59,24 @@ public sealed class Ball : MonoBehaviour
     public static float GetDiameter(int level)
     {
         return BallConfig.GetDiameter(level);
+    }
+
+    public bool IsReadyForNextDrop(float spawnY)
+    {
+        if (isMerging || body == null)
+        {
+            return true;
+        }
+
+        var age = Time.time - SpawnedAt;
+        if (age >= ForcedNextDropSeconds)
+        {
+            return true;
+        }
+
+        var hasLeftSpawnArea = transform.position.y + Radius < spawnY - 0.85f;
+        var slowedEnough = body.linearVelocity.sqrMagnitude <= NextDropVelocity * NextDropVelocity;
+        return hasLeftSpawnArea && slowedEnough;
     }
 
     public bool IsEligibleForDanger(float dangerLineY)
