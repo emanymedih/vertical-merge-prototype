@@ -5,6 +5,20 @@ using UnityEngine.SceneManagement;
 public sealed class GameController : MonoBehaviour
 {
     private const string BestScoreKey = "MergePrototypeBestScore";
+    private static readonly int[] MergeScoreByLevel =
+    {
+        0,
+        0,
+        10,
+        25,
+        60,
+        140,
+        320,
+        720,
+        1600,
+        3500,
+        7500
+    };
 
     private readonly List<Ball> activeBalls = new List<Ball>();
     private GameUi gameUi;
@@ -107,7 +121,18 @@ public sealed class GameController : MonoBehaviour
 
     private static int GetScoreForLevel(int level)
     {
-        return 10 * (1 << Mathf.Clamp(level - 1, 0, 20));
+        if (level < MergeScoreByLevel.Length)
+        {
+            return MergeScoreByLevel[level];
+        }
+
+        var score = MergeScoreByLevel[MergeScoreByLevel.Length - 1];
+        for (var currentLevel = MergeScoreByLevel.Length; currentLevel <= level; currentLevel++)
+        {
+            score = Mathf.RoundToInt(score * 2.15f);
+        }
+
+        return score;
     }
 
     private void UpdateUi()
