@@ -29,6 +29,8 @@ public sealed class CosmicBodyVisual : MonoBehaviour
 
     private void BuildVisual(CosmicBodyMetadata metadata)
     {
+        AddReadabilityRim(metadata);
+
         switch (metadata.VisualType)
         {
             case CosmicVisualType.Asteroid:
@@ -50,23 +52,28 @@ public sealed class CosmicBodyVisual : MonoBehaviour
                 AddBand(new Vector2(0f, -0.24f), 0.64f, 0.07f, metadata.DetailColor, 0.28f);
                 break;
             case CosmicVisualType.Star:
-                AddGlow(metadata.GlowColor, 0.32f, strongGlowScale);
-                AddCore(metadata.DetailColor, 0.38f, 0.58f);
+                AddGlow(metadata.GlowColor, 0.34f, strongGlowScale);
+                AddCore(metadata.DetailColor, 0.44f, 0.5f);
+                AddCore(Color.white, 0.2f, 0.72f, 3);
                 break;
             case CosmicVisualType.RedGiant:
-                AddGlow(metadata.GlowColor, 0.38f, strongGlowScale + 0.08f);
-                AddCore(metadata.DetailColor, 0.34f, 0.48f);
-                AddBand(new Vector2(0f, -0.12f), 0.62f, 0.08f, metadata.DetailColor, 0.24f);
+                AddGlow(metadata.GlowColor, 0.44f, strongGlowScale + 0.14f);
+                AddCore(metadata.DetailColor, 0.36f, 0.56f);
+                AddBand(new Vector2(0f, 0.12f), 0.72f, 0.09f, metadata.DetailColor, 0.2f);
+                AddBand(new Vector2(0f, -0.16f), 0.66f, 0.08f, Color.Lerp(metadata.DetailColor, Color.red, 0.22f), 0.3f);
                 break;
             case CosmicVisualType.NeutronStar:
-                AddGlow(metadata.GlowColor, 0.44f, strongGlowScale);
-                AddCore(metadata.DetailColor, 0.28f, 0.82f);
-                AddRing(metadata.GlowColor, 0.44f, 1.12f, 0.22f);
+                AddGlow(metadata.GlowColor, 0.48f, strongGlowScale + 0.02f);
+                AddCore(metadata.DetailColor, 0.3f, 0.88f);
+                AddRing(metadata.GlowColor, 0.5f, 1.18f, 0.2f);
+                AddBand(Vector2.zero, 0.9f, 0.045f, metadata.DetailColor, 0.42f);
                 break;
             case CosmicVisualType.BlackHole:
-                AddGlow(metadata.GlowColor, 0.36f, strongGlowScale + 0.1f);
-                AddRing(metadata.GlowColor, 0.78f, ringScaleX, ringScaleY);
-                AddCore(Color.black, 0.52f, 0.62f);
+                AddGlow(metadata.GlowColor, 0.46f, strongGlowScale + 0.18f);
+                AddRing(metadata.DetailColor, 0.46f, ringScaleX * 1.08f, ringScaleY * 1.18f);
+                AddRing(metadata.GlowColor, 0.86f, ringScaleX, ringScaleY);
+                AddCore(metadata.DetailColor, 0.62f, 0.28f, 1);
+                AddCore(Color.black, 0.5f, 0.9f, 3);
                 break;
             case CosmicVisualType.GalaxyCore:
                 AddGlow(metadata.GlowColor, 0.46f, strongGlowScale + 0.14f);
@@ -75,6 +82,13 @@ public sealed class CosmicBodyVisual : MonoBehaviour
                 AddCore(Color.white, 0.24f, 0.82f, 3);
                 break;
         }
+    }
+
+    private void AddReadabilityRim(CosmicBodyMetadata metadata)
+    {
+        var rimColor = Color.Lerp(metadata.GlowColor, Color.white, metadata.Level >= 8 ? 0.18f : 0.08f);
+        var alpha = metadata.Level >= 6 ? 0.32f : 0.22f;
+        AddCircle("Readability Rim", Vector2.zero, 1.045f, WithAlpha(rimColor, alpha), mainRenderer.sortingOrder - 1);
     }
 
     private void AddSpots(Color color, Vector2[] positions, float[] sizes)
@@ -89,30 +103,22 @@ public sealed class CosmicBodyVisual : MonoBehaviour
 
     private void AddGlow(Color color, float alpha, float scale)
     {
-        var glowColor = color;
-        glowColor.a = alpha;
-        AddCircle("Body Glow", Vector2.zero, scale, glowColor, mainRenderer.sortingOrder - 2);
+        AddCircle("Body Glow", Vector2.zero, scale, WithAlpha(color, alpha), mainRenderer.sortingOrder - 2);
     }
 
     private void AddCore(Color color, float scale, float alpha, int sortingOffset = 2)
     {
-        var coreColor = color;
-        coreColor.a = alpha;
-        AddCircle("Body Core", Vector2.zero, scale, coreColor, mainRenderer.sortingOrder + sortingOffset);
+        AddCircle("Body Core", Vector2.zero, scale, WithAlpha(color, alpha), mainRenderer.sortingOrder + sortingOffset);
     }
 
     private void AddRing(Color color, float alpha, float scaleX, float scaleY)
     {
-        var ringColor = color;
-        ringColor.a = alpha;
-        AddShape("Energy Ring", Vector2.zero, new Vector2(scaleX, scaleY), ringColor, mainRenderer.sortingOrder + 1, CircleSpriteCache.Circle);
+        AddShape("Energy Ring", Vector2.zero, new Vector2(scaleX, scaleY), WithAlpha(color, alpha), mainRenderer.sortingOrder + 1, CircleSpriteCache.Circle);
     }
 
     private void AddBand(Vector2 position, float width, float height, Color color, float alpha)
     {
-        var bandColor = color;
-        bandColor.a = alpha;
-        AddShape("Atmosphere Band", position, new Vector2(width, height), bandColor, mainRenderer.sortingOrder + 1, CircleSpriteCache.Square);
+        AddShape("Atmosphere Band", position, new Vector2(width, height), WithAlpha(color, alpha), mainRenderer.sortingOrder + 1, CircleSpriteCache.Square);
     }
 
     private void AddCircle(string name, Vector2 position, float scale, Color color, int sortingOrder)
@@ -132,5 +138,11 @@ public sealed class CosmicBodyVisual : MonoBehaviour
         renderer.sprite = sprite;
         renderer.color = color;
         renderer.sortingOrder = sortingOrder;
+    }
+
+    private static Color WithAlpha(Color color, float alpha)
+    {
+        color.a = alpha;
+        return color;
     }
 }

@@ -3,6 +3,8 @@ using UnityEngine;
 public sealed class DangerLine : MonoBehaviour
 {
     private const float GameOverHoldSeconds = 2f;
+    private const float WarningThreshold = 0.28f;
+    private const float CriticalThreshold = 0.68f;
 
     private GameController controller;
     private SpriteRenderer visual;
@@ -27,7 +29,7 @@ public sealed class DangerLine : MonoBehaviour
 
         zone = zoneObject.AddComponent<SpriteRenderer>();
         zone.sprite = CircleSpriteCache.Square;
-        zone.color = new Color(1f, 0.05f, 0.24f, 0.035f);
+        zone.color = new Color(1f, 0.05f, 0.24f, 0.01f);
         zone.sortingOrder = 7;
 
         visual = gameObject.AddComponent<SpriteRenderer>();
@@ -44,7 +46,7 @@ public sealed class DangerLine : MonoBehaviour
 
         glow = glowObject.AddComponent<SpriteRenderer>();
         glow.sprite = CircleSpriteCache.Square;
-        glow.color = new Color(1f, 0.08f, 0.22f, 0.08f);
+        glow.color = new Color(1f, 0.08f, 0.22f, 0.018f);
         glow.sortingOrder = 8;
 
         var labelObject = new GameObject("Critical Zone Label");
@@ -59,7 +61,7 @@ public sealed class DangerLine : MonoBehaviour
         label.characterSize = 0.035f;
         label.anchor = TextAnchor.MiddleCenter;
         label.alignment = TextAlignment.Center;
-        label.color = new Color(1f, 0.38f, 0.52f, 0.34f);
+        label.color = new Color(1f, 0.38f, 0.52f, 0.12f);
 
         var labelRenderer = labelObject.GetComponent<MeshRenderer>();
         labelRenderer.sortingOrder = 10;
@@ -92,7 +94,8 @@ public sealed class DangerLine : MonoBehaviour
         UpdateVisualState();
         controller.SetDangerPressure(Mathf.Clamp01(dangerTimer / GameOverHoldSeconds));
 
-        if (dangerTimer > 0.1f && !warningSoundPlayed)
+        var pressure = Mathf.Clamp01(dangerTimer / GameOverHoldSeconds);
+        if (pressure >= WarningThreshold && !warningSoundPlayed)
         {
             warningSoundPlayed = true;
             SoundManager.Play(SoundEvent.DangerWarning);
@@ -116,19 +119,30 @@ public sealed class DangerLine : MonoBehaviour
         if (t <= 0f)
         {
             visual.color = GetSafeColor();
-            glow.color = new Color(0.9f, 0.08f, 0.24f, 0.045f);
-            zone.color = new Color(1f, 0.05f, 0.24f, 0.035f);
-            label.color = new Color(1f, 0.38f, 0.52f, 0.34f);
+            glow.color = new Color(0.9f, 0.08f, 0.24f, 0.018f);
+            zone.color = new Color(1f, 0.05f, 0.24f, 0.01f);
+            label.color = new Color(1f, 0.38f, 0.52f, 0.12f);
             return;
         }
 
-        var pulse = Mathf.Sin(Time.time * 16f) * 0.5f + 0.5f;
-        if (t < 0.65f)
+        if (t < WarningThreshold)
         {
-            visual.color = Color.Lerp(new Color(1f, 0.34f, 0.42f, 0.55f), new Color(1f, 0.18f, 0.34f, 0.86f), t);
-            glow.color = Color.Lerp(new Color(1f, 0.16f, 0.38f, 0.12f), new Color(1f, 0.08f, 0.28f, 0.24f), t);
-            zone.color = Color.Lerp(new Color(1f, 0.05f, 0.24f, 0.06f), new Color(1f, 0.08f, 0.28f, 0.18f), t);
-            label.color = Color.Lerp(new Color(1f, 0.42f, 0.56f, 0.46f), new Color(1f, 0.54f, 0.62f, 0.82f), t);
+            var earlyT = Mathf.Clamp01(t / WarningThreshold);
+            visual.color = Color.Lerp(GetSafeColor(), new Color(1f, 0.2f, 0.36f, 0.28f), earlyT);
+            glow.color = Color.Lerp(new Color(1f, 0.08f, 0.24f, 0.018f), new Color(1f, 0.12f, 0.32f, 0.08f), earlyT);
+            zone.color = Color.Lerp(new Color(1f, 0.05f, 0.24f, 0.01f), new Color(1f, 0.05f, 0.24f, 0.04f), earlyT);
+            label.color = Color.Lerp(new Color(1f, 0.38f, 0.52f, 0.12f), new Color(1f, 0.44f, 0.58f, 0.28f), earlyT);
+            return;
+        }
+
+        var pulse = Mathf.Sin(Time.time * 10f) * 0.5f + 0.5f;
+        if (t < CriticalThreshold)
+        {
+            var warningT = Mathf.Clamp01((t - WarningThreshold) / (CriticalThreshold - WarningThreshold));
+            visual.color = Color.Lerp(new Color(1f, 0.26f, 0.38f, 0.36f), new Color(1f, 0.16f, 0.34f, 0.72f), warningT);
+            glow.color = Color.Lerp(new Color(1f, 0.16f, 0.38f, 0.1f), new Color(1f, 0.08f, 0.28f, 0.22f), warningT);
+            zone.color = Color.Lerp(new Color(1f, 0.05f, 0.24f, 0.05f), new Color(1f, 0.08f, 0.28f, 0.16f), warningT);
+            label.color = Color.Lerp(new Color(1f, 0.42f, 0.56f, 0.36f), new Color(1f, 0.54f, 0.62f, 0.76f), warningT);
             return;
         }
 
@@ -140,6 +154,6 @@ public sealed class DangerLine : MonoBehaviour
 
     private static Color GetSafeColor()
     {
-        return new Color(1f, 0.14f, 0.34f, 0.18f);
+        return new Color(1f, 0.14f, 0.34f, 0.065f);
     }
 }

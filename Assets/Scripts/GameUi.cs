@@ -230,13 +230,13 @@ public sealed class GameUi : MonoBehaviour
         var background = gameOverPanel.AddComponent<Image>();
         background.color = new Color(0f, 0f, 0f, 0.72f);
 
-        var title = CreateText(gameOverPanel.transform, "Game Over Title", new Vector2(0f, 420f), TextAnchor.MiddleCenter, 56, new Color(0.82f, 0.88f, 0.98f, 0.9f));
-        title.text = "Game Over";
-        title.rectTransform.sizeDelta = new Vector2(760f, 82f);
+        var title = CreateText(gameOverPanel.transform, "Game Over Title", new Vector2(0f, 430f), TextAnchor.MiddleCenter, 38, new Color(0.82f, 0.88f, 0.98f, 0.82f));
+        title.text = "Run Complete";
+        title.rectTransform.sizeDelta = new Vector2(760f, 58f);
 
         CreateGameOverLargestPreview(gameOverPanel.transform);
 
-        gameOverCreatedText = CreateText(gameOverPanel.transform, "Game Over Created", new Vector2(0f, 210f), TextAnchor.MiddleCenter, 48, Color.white);
+        gameOverCreatedText = CreateText(gameOverPanel.transform, "Game Over Created", new Vector2(0f, 206f), TextAnchor.MiddleCenter, 52, Color.white);
         gameOverCreatedText.rectTransform.sizeDelta = new Vector2(780f, 150f);
         gameOverCreatedText.lineSpacing = 0.9f;
 
@@ -327,7 +327,7 @@ public sealed class GameUi : MonoBehaviour
     {
         if (newBestLargest)
         {
-            return "New Largest Ball Record!";
+            return "New Largest Record!";
         }
 
         if (newBestScore)

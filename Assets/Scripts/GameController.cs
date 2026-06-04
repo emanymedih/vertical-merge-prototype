@@ -43,6 +43,8 @@ public sealed class GameController : MonoBehaviour
     private int lastAnnouncedChainCount;
     private float dangerPressure;
     private float lastSavedMessageTime = -999f;
+    private float runStartedAt;
+    private int runMergeCount;
 
     public int Score { get; private set; }
     public int BestScore { get; private set; }
@@ -67,6 +69,7 @@ public sealed class GameController : MonoBehaviour
         BestScore = PlayerPrefs.GetInt(BestScoreKey, 0);
         BestLargestLevel = PlayerPrefs.GetInt(BestLargestBallKey, 1);
         startingBestScore = BestScore;
+        runStartedAt = Time.time;
         UpdateUi();
     }
 
@@ -89,6 +92,7 @@ public sealed class GameController : MonoBehaviour
         }
 
         var hadDangerPressure = dangerPressure >= savedDangerThreshold;
+        runMergeCount++;
 
         first.MarkMerging();
         second.MarkMerging();
@@ -183,6 +187,7 @@ public sealed class GameController : MonoBehaviour
         }
 
         IsGameOver = true;
+        LogRunSummary();
         SoundManager.Play(SoundEvent.GameOver);
         gameUi.ShowGameOver(Score, BestScore, highestMergedLevel, BestLargestLevel, newBestScoreThisRun, newBestLargestThisRun, GetMotivationLine());
     }
@@ -287,10 +292,27 @@ public sealed class GameController : MonoBehaviour
     {
         if (level >= 8)
         {
-            return 1.25f;
+            return 1.34f;
         }
 
-        return level >= 6 ? 1.18f : 1f;
+        return level >= 6 ? 1.22f : 1f;
+    }
+
+    private void LogRunSummary()
+    {
+        var runDuration = Mathf.Max(0f, Time.time - runStartedAt);
+        Debug.Log(
+            $"Run complete: duration={FormatDuration(runDuration)}, " +
+            $"score={Score}, largest={CosmicBodyConfig.GetShortName(highestMergedLevel)}, " +
+            $"mergeCount={runMergeCount}");
+    }
+
+    private static string FormatDuration(float seconds)
+    {
+        var totalSeconds = Mathf.RoundToInt(seconds);
+        var minutes = totalSeconds / 60;
+        var remainingSeconds = totalSeconds % 60;
+        return $"{minutes:00}:{remainingSeconds:00}";
     }
 
     private void RegisterMergeForChain()

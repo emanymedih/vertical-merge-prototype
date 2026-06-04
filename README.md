@@ -8,6 +8,7 @@ Minimal Unity 2D iOS prototype for a portrait physics merge game.
 - Runtime-generated circular balls and container visuals
 - Planets / Cosmic Bodies theme naming documented in `Docs/ThemePlanets.md`
 - Procedural cosmic body and arena visual direction documented in `Docs/VisualIdentityPlan.md`
+- Classic arcade readability and manual run-test pass documented in `Docs/ClassicArcadeCorePass.md`
 - Drag horizontally near the top and release to drop
 - Same-level balls merge into the next level
 - Score and best score

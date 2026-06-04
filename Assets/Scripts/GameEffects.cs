@@ -8,6 +8,7 @@ public sealed class GameEffects : MonoBehaviour
     [SerializeField] private float baseMergeFlashDuration = 0.22f;
     [SerializeField] private float floatingScoreDuration = 0.75f;
     [SerializeField] private float highLevelShakeDuration = 0.12f;
+    [SerializeField] private float peakLevelShakeDuration = 0.16f;
 
     private CameraShake cameraShake;
 
@@ -25,9 +26,9 @@ public sealed class GameEffects : MonoBehaviour
         if (level >= highImpactLevel)
         {
             var shakeStrength = level >= peakImpactLevel
-                ? Mathf.Min(0.045f + level * 0.007f, 0.095f)
+                ? Mathf.Min(0.052f + level * 0.008f, 0.11f)
                 : Mathf.Min(0.03f + level * 0.005f, 0.065f);
-            cameraShake.Shake(highLevelShakeDuration, shakeStrength);
+            cameraShake.Shake(level >= peakImpactLevel ? peakLevelShakeDuration : highLevelShakeDuration, shakeStrength);
         }
     }
 
@@ -38,7 +39,8 @@ public sealed class GameEffects : MonoBehaviour
 
         var renderer = flash.AddComponent<SpriteRenderer>();
         renderer.sprite = CircleSpriteCache.Circle;
-        renderer.color = CircleSpriteCache.GetBallColor(level);
+        var flashColor = Color.Lerp(CircleSpriteCache.GetBallColor(level), CosmicBodyConfig.GetGlowColor(level), level >= highImpactLevel ? 0.45f : 0.2f);
+        renderer.color = flashColor;
         renderer.sortingOrder = 30;
 
         var startScale = Vector3.one * Ball.GetDiameter(level);
@@ -72,7 +74,9 @@ public sealed class GameEffects : MonoBehaviour
         textMesh.characterSize = 0.045f;
         textMesh.anchor = TextAnchor.MiddleCenter;
         textMesh.alignment = TextAlignment.Center;
-        textMesh.color = Color.white;
+        textMesh.color = level >= peakImpactLevel
+            ? new Color(0.9f, 1f, 1f)
+            : level >= highImpactLevel ? new Color(1f, 0.92f, 0.62f) : Color.white;
 
         var renderer = scoreObject.GetComponent<MeshRenderer>();
         renderer.sortingOrder = 50;
@@ -113,9 +117,9 @@ public sealed class GameEffects : MonoBehaviour
         main.loop = false;
         main.startLifetime = 0.32f;
         main.startSpeed = 1.7f + level * 0.09f;
-        main.startSize = level >= highImpactLevel ? 0.11f : 0.08f;
-        main.startColor = CircleSpriteCache.GetBallColor(level);
-        main.maxParticles = level >= highImpactLevel ? 32 : 24;
+        main.startSize = level >= peakImpactLevel ? 0.13f : level >= highImpactLevel ? 0.11f : 0.08f;
+        main.startColor = Color.Lerp(CircleSpriteCache.GetBallColor(level), CosmicBodyConfig.GetGlowColor(level), 0.35f);
+        main.maxParticles = level >= peakImpactLevel ? 36 : level >= highImpactLevel ? 30 : 22;
 
         var emission = particles.emission;
         emission.enabled = false;
@@ -125,7 +129,8 @@ public sealed class GameEffects : MonoBehaviour
         shape.shapeType = ParticleSystemShapeType.Circle;
         shape.radius = 0.25f;
 
-        particles.Emit(Mathf.Clamp(8 + level * 2, 10, level >= highImpactLevel ? 32 : 24));
+        var maxBurst = level >= peakImpactLevel ? 36 : level >= highImpactLevel ? 30 : 22;
+        particles.Emit(Mathf.Clamp(8 + level * 2, 10, maxBurst));
         Destroy(particleObject, 1f);
     }
 
@@ -133,29 +138,29 @@ public sealed class GameEffects : MonoBehaviour
     {
         if (level >= peakImpactLevel)
         {
-            return 1.95f;
+            return 2.12f;
         }
 
-        return level >= highImpactLevel ? 1.78f : 1.55f;
+        return level >= highImpactLevel ? 1.82f : 1.5f;
     }
 
     private int GetFloatingScoreFontSize(int level)
     {
         if (level >= peakImpactLevel)
         {
-            return 68;
+            return 74;
         }
 
-        return level >= highImpactLevel ? 58 : 44;
+        return level >= highImpactLevel ? 60 : 42;
     }
 
     private float GetFloatingScoreScale(int level)
     {
         if (level >= peakImpactLevel)
         {
-            return 1.36f;
+            return 1.48f;
         }
 
-        return level >= highImpactLevel ? 1.2f : 1f;
+        return level >= highImpactLevel ? 1.24f : 1f;
     }
 }

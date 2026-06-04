@@ -138,14 +138,17 @@ public sealed class Ball : MonoBehaviour
 
         var clampedStrength = Mathf.Clamp01(strength);
         var brightness = emphasized ? resonanceEmphasizedBrightness : resonanceNormalBrightness;
-        spriteRenderer.color = Color.Lerp(baseColor, Color.white, clampedStrength * brightness);
+        var glowColor = CosmicBodyConfig.GetGlowColor(Level);
+        var tintColor = Color.Lerp(glowColor, Color.white, emphasized ? 0.28f : 0.12f);
+        spriteRenderer.color = Color.Lerp(baseColor, tintColor, clampedStrength * brightness);
 
         var pulse = Mathf.Sin(Time.time * (emphasized ? 8.5f : 6.5f)) * 0.5f + 0.5f;
-        var glowAlpha = Mathf.Lerp(0.12f, emphasized ? 0.34f : 0.22f, pulse) * clampedStrength;
+        var glowAlpha = Mathf.Lerp(0.14f, emphasized ? 0.42f : 0.26f, pulse) * clampedStrength;
         var maxGlowScale = emphasized ? resonanceEmphasizedMaxScale : resonanceNormalMaxScale;
         var glowScale = Mathf.Lerp(1.14f, maxGlowScale, pulse) + clampedStrength * 0.05f;
 
-        resonanceGlow.color = new Color(1f, 1f, 1f, glowAlpha);
+        glowColor.a = glowAlpha;
+        resonanceGlow.color = glowColor;
         resonanceGlow.transform.localScale = Vector3.one * glowScale;
         resonanceGlow.enabled = true;
     }

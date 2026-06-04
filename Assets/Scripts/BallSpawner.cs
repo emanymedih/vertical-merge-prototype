@@ -4,7 +4,7 @@ public sealed class BallSpawner : MonoBehaviour
 {
     private const float MinimumDropInterval = 0.45f;
 
-    [SerializeField] private float resonanceStrength = 0.58f;
+    [SerializeField] private float resonanceStrength = 0.64f;
     [SerializeField] private float anticipationStrength = 1f;
     [SerializeField] private float anticipationHorizontalPadding = 0.35f;
     [SerializeField] private Color dropGuideColor = new Color(0.24f, 0.84f, 1f, 1f);
