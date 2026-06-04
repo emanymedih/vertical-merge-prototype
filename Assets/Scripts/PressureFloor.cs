@@ -14,6 +14,8 @@ public sealed class PressureFloor : MonoBehaviour
     private BoxCollider2D surfaceCollider;
     private SpriteRenderer surfaceRenderer;
     private SpriteRenderer fillRenderer;
+    private SpriteRenderer lowerFillRenderer;
+    private SpriteRenderer topGlowRenderer;
     private float startY;
     private float currentY;
     private float bottomY;
@@ -46,8 +48,20 @@ public sealed class PressureFloor : MonoBehaviour
         var fill = new GameObject("Pressure Fill");
         fillRenderer = fill.AddComponent<SpriteRenderer>();
         fillRenderer.sprite = CircleSpriteCache.Square;
-        fillRenderer.color = new Color(0.12f, 0.55f, 0.95f, 0.24f);
+        fillRenderer.color = new Color(0.12f, 0.55f, 0.95f, 0.12f);
         fillRenderer.sortingOrder = 1;
+
+        var lowerFill = new GameObject("Pressure Lower Field");
+        lowerFillRenderer = lowerFill.AddComponent<SpriteRenderer>();
+        lowerFillRenderer.sprite = CircleSpriteCache.Square;
+        lowerFillRenderer.color = new Color(0.04f, 0.28f, 0.72f, 0.16f);
+        lowerFillRenderer.sortingOrder = 1;
+
+        var topGlow = new GameObject("Pressure Energy Wave");
+        topGlowRenderer = topGlow.AddComponent<SpriteRenderer>();
+        topGlowRenderer.sprite = CircleSpriteCache.Square;
+        topGlowRenderer.color = new Color(0.32f, 0.9f, 1f, 0.36f);
+        topGlowRenderer.sortingOrder = 5;
 
         SetPositionImmediately();
         UpdateVisual();
@@ -119,9 +133,28 @@ public sealed class PressureFloor : MonoBehaviour
         fillRenderer.transform.localScale = new Vector3(width, fillHeight, 1f);
 
         var dangerT = Mathf.InverseLerp(bottomY, dangerY, currentY);
+        var lowerHeight = Mathf.Max(0.02f, fillHeight * 0.58f);
+        lowerFillRenderer.transform.position = new Vector3(0f, bottomY + lowerHeight * 0.5f, 0f);
+        lowerFillRenderer.transform.localScale = new Vector3(width, lowerHeight, 1f);
+
+        topGlowRenderer.transform.position = new Vector3(0f, currentY + 0.035f, 0f);
+        topGlowRenderer.transform.localScale = new Vector3(width, 0.065f, 1f);
+
+        fillRenderer.color = Color.Lerp(
+            new Color(0.08f, 0.45f, 0.9f, 0.09f),
+            new Color(0.95f, 0.18f, 0.12f, 0.17f),
+            dangerT);
+        lowerFillRenderer.color = Color.Lerp(
+            new Color(0.03f, 0.22f, 0.62f, 0.14f),
+            new Color(0.72f, 0.08f, 0.08f, 0.24f),
+            dangerT);
+        topGlowRenderer.color = Color.Lerp(
+            new Color(0.32f, 0.9f, 1f, 0.34f),
+            new Color(1f, 0.32f, 0.2f, 0.46f),
+            dangerT);
         surfaceRenderer.color = Color.Lerp(
-            new Color(0.24f, 0.76f, 1f, 0.62f),
-            new Color(1f, 0.25f, 0.16f, 0.86f),
+            new Color(0.24f, 0.76f, 1f, 0.46f),
+            new Color(1f, 0.25f, 0.16f, 0.68f),
             dangerT);
     }
 }

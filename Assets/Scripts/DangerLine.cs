@@ -55,7 +55,7 @@ public sealed class DangerLine : MonoBehaviour
         labelObject.transform.localRotation = Quaternion.identity;
 
         label = labelObject.AddComponent<TextMesh>();
-        label.text = "CRITICAL ZONE";
+        label.text = "DANGER";
         label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         label.fontSize = 48;
         label.characterSize = 0.035f;
@@ -109,6 +109,7 @@ public sealed class DangerLine : MonoBehaviour
 
         if (dangerTimer >= GameOverHoldSeconds)
         {
+            SetGameOverFlashVisual();
             controller.TriggerGameOver();
         }
     }
@@ -120,8 +121,9 @@ public sealed class DangerLine : MonoBehaviour
         {
             visual.color = GetSafeColor();
             glow.color = new Color(0.9f, 0.08f, 0.24f, 0.018f);
-            zone.color = new Color(1f, 0.05f, 0.24f, 0.01f);
-            label.color = new Color(1f, 0.38f, 0.52f, 0.12f);
+            zone.color = new Color(1f, 0.05f, 0.24f, 0.006f);
+            label.text = string.Empty;
+            label.color = new Color(1f, 0.38f, 0.52f, 0f);
             return;
         }
 
@@ -131,7 +133,8 @@ public sealed class DangerLine : MonoBehaviour
             visual.color = Color.Lerp(GetSafeColor(), new Color(1f, 0.2f, 0.36f, 0.28f), earlyT);
             glow.color = Color.Lerp(new Color(1f, 0.08f, 0.24f, 0.018f), new Color(1f, 0.12f, 0.32f, 0.08f), earlyT);
             zone.color = Color.Lerp(new Color(1f, 0.05f, 0.24f, 0.01f), new Color(1f, 0.05f, 0.24f, 0.04f), earlyT);
-            label.color = Color.Lerp(new Color(1f, 0.38f, 0.52f, 0.12f), new Color(1f, 0.44f, 0.58f, 0.28f), earlyT);
+            label.text = "DANGER";
+            label.color = Color.Lerp(new Color(1f, 0.38f, 0.52f, 0.08f), new Color(1f, 0.44f, 0.58f, 0.24f), earlyT);
             return;
         }
 
@@ -142,14 +145,25 @@ public sealed class DangerLine : MonoBehaviour
             visual.color = Color.Lerp(new Color(1f, 0.26f, 0.38f, 0.36f), new Color(1f, 0.16f, 0.34f, 0.72f), warningT);
             glow.color = Color.Lerp(new Color(1f, 0.16f, 0.38f, 0.1f), new Color(1f, 0.08f, 0.28f, 0.22f), warningT);
             zone.color = Color.Lerp(new Color(1f, 0.05f, 0.24f, 0.05f), new Color(1f, 0.08f, 0.28f, 0.16f), warningT);
+            label.text = "Critical Zone";
             label.color = Color.Lerp(new Color(1f, 0.42f, 0.56f, 0.36f), new Color(1f, 0.54f, 0.62f, 0.76f), warningT);
             return;
         }
 
+        label.text = "CRITICAL ZONE";
         visual.color = Color.Lerp(new Color(1f, 0.08f, 0.28f, 0.85f), new Color(1f, 0.42f, 0.72f, 1f), pulse);
         glow.color = Color.Lerp(new Color(1f, 0.06f, 0.28f, 0.28f), new Color(1f, 0.32f, 0.68f, 0.48f), pulse);
         zone.color = Color.Lerp(new Color(1f, 0.04f, 0.22f, 0.2f), new Color(1f, 0.18f, 0.5f, 0.34f), pulse);
         label.color = Color.Lerp(new Color(1f, 0.56f, 0.68f, 0.82f), new Color(1f, 0.86f, 0.92f, 1f), pulse);
+    }
+
+    private void SetGameOverFlashVisual()
+    {
+        visual.color = new Color(1f, 0.78f, 0.9f, 1f);
+        glow.color = new Color(1f, 0.38f, 0.72f, 0.64f);
+        zone.color = new Color(1f, 0.18f, 0.5f, 0.42f);
+        label.text = "CRITICAL ZONE";
+        label.color = new Color(1f, 0.94f, 0.98f, 1f);
     }
 
     private static Color GetSafeColor()
