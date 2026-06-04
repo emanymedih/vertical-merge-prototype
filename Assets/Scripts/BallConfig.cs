@@ -65,16 +65,16 @@ public static class BallConfig
     private static readonly float[] Friction =
     {
         0f,
-        0.18f,
+        0.055f,
+        0.065f,
+        0.08f,
+        0.10f,
+        0.12f,
+        0.145f,
+        0.17f,
+        0.195f,
         0.22f,
-        0.27f,
-        0.32f,
-        0.37f,
-        0.42f,
-        0.47f,
-        0.51f,
-        0.55f,
-        0.58f
+        0.24f
     };
 
     private static readonly float[] Bounciness =

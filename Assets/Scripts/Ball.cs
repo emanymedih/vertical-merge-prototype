@@ -9,6 +9,9 @@ public sealed class Ball : MonoBehaviour
     private const float SettledAngularVelocity = 75f;
     private const float NextDropVelocity = 1.05f;
     private const float ForcedNextDropSeconds = 1.35f;
+    private const float BalancedStackX = 0.09f;
+    private const float StackNudgeForce = 0.72f;
+    private const float StackNudgeTorque = 0.16f;
 
     private GameController controller;
     private Rigidbody2D body;
@@ -131,6 +134,37 @@ public sealed class Ball : MonoBehaviour
         }
 
         controller.MergeBalls(this, other);
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        if (isMerging || body == null)
+        {
+            return;
+        }
+
+        var other = collision.collider.GetComponent<Ball>();
+        if (other == null || other.isMerging || transform.position.y <= other.transform.position.y)
+        {
+            return;
+        }
+
+        var xOffset = transform.position.x - other.transform.position.x;
+        if (Mathf.Abs(xOffset) > BalancedStackX)
+        {
+            return;
+        }
+
+        var direction = xOffset >= 0f ? 1f : -1f;
+        if (Mathf.Abs(xOffset) < 0.012f)
+        {
+            direction = MergeId > other.MergeId ? 1f : -1f;
+        }
+
+        var levelFactor = Mathf.Clamp01(Level / 8f);
+        var force = Mathf.Lerp(StackNudgeForce, StackNudgeForce * 0.45f, levelFactor);
+        body.AddForce(Vector2.right * direction * force, ForceMode2D.Force);
+        body.AddTorque(-direction * StackNudgeTorque, ForceMode2D.Force);
     }
 
     private void OnDestroy()
