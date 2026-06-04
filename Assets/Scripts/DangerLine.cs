@@ -7,14 +7,28 @@ public sealed class DangerLine : MonoBehaviour
     private GameController controller;
     private SpriteRenderer visual;
     private SpriteRenderer glow;
+    private SpriteRenderer zone;
+    private TextMesh label;
     private float lineY;
     private float dangerTimer;
+    private bool warningSoundPlayed;
 
     public void Initialize(GameController gameController, float y, float width)
     {
         controller = gameController;
         lineY = y;
         transform.position = new Vector3(0f, lineY, 0f);
+
+        var zoneObject = new GameObject("Critical Zone Field");
+        zoneObject.transform.SetParent(transform);
+        zoneObject.transform.localPosition = new Vector3(0f, -0.24f, 0f);
+        zoneObject.transform.localRotation = Quaternion.identity;
+        zoneObject.transform.localScale = new Vector3(1f, 12f, 1f);
+
+        zone = zoneObject.AddComponent<SpriteRenderer>();
+        zone.sprite = CircleSpriteCache.Square;
+        zone.color = new Color(1f, 0.05f, 0.24f, 0.035f);
+        zone.sortingOrder = 7;
 
         visual = gameObject.AddComponent<SpriteRenderer>();
         visual.sprite = CircleSpriteCache.Square;
@@ -32,6 +46,23 @@ public sealed class DangerLine : MonoBehaviour
         glow.sprite = CircleSpriteCache.Square;
         glow.color = new Color(1f, 0.08f, 0.22f, 0.08f);
         glow.sortingOrder = 8;
+
+        var labelObject = new GameObject("Critical Zone Label");
+        labelObject.transform.SetParent(transform);
+        labelObject.transform.localPosition = new Vector3(0f, 0.13f, -0.2f);
+        labelObject.transform.localRotation = Quaternion.identity;
+
+        label = labelObject.AddComponent<TextMesh>();
+        label.text = "CRITICAL ZONE";
+        label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        label.fontSize = 48;
+        label.characterSize = 0.035f;
+        label.anchor = TextAnchor.MiddleCenter;
+        label.alignment = TextAlignment.Center;
+        label.color = new Color(1f, 0.38f, 0.52f, 0.34f);
+
+        var labelRenderer = labelObject.GetComponent<MeshRenderer>();
+        labelRenderer.sortingOrder = 10;
     }
 
     private void Update()
@@ -61,6 +92,18 @@ public sealed class DangerLine : MonoBehaviour
         UpdateVisualState();
         controller.SetDangerPressure(Mathf.Clamp01(dangerTimer / GameOverHoldSeconds));
 
+        if (dangerTimer > 0.1f && !warningSoundPlayed)
+        {
+            warningSoundPlayed = true;
+            SoundManager.Play(SoundEvent.DangerWarning);
+            OnboardingController.Instance?.SetDangerActive(true);
+        }
+        else if (dangerTimer <= 0f)
+        {
+            warningSoundPlayed = false;
+            OnboardingController.Instance?.SetDangerActive(false);
+        }
+
         if (dangerTimer >= GameOverHoldSeconds)
         {
             controller.TriggerGameOver();
@@ -74,6 +117,8 @@ public sealed class DangerLine : MonoBehaviour
         {
             visual.color = GetSafeColor();
             glow.color = new Color(0.9f, 0.08f, 0.24f, 0.045f);
+            zone.color = new Color(1f, 0.05f, 0.24f, 0.035f);
+            label.color = new Color(1f, 0.38f, 0.52f, 0.34f);
             return;
         }
 
@@ -82,11 +127,15 @@ public sealed class DangerLine : MonoBehaviour
         {
             visual.color = Color.Lerp(new Color(1f, 0.34f, 0.42f, 0.55f), new Color(1f, 0.18f, 0.34f, 0.86f), t);
             glow.color = Color.Lerp(new Color(1f, 0.16f, 0.38f, 0.12f), new Color(1f, 0.08f, 0.28f, 0.24f), t);
+            zone.color = Color.Lerp(new Color(1f, 0.05f, 0.24f, 0.06f), new Color(1f, 0.08f, 0.28f, 0.18f), t);
+            label.color = Color.Lerp(new Color(1f, 0.42f, 0.56f, 0.46f), new Color(1f, 0.54f, 0.62f, 0.82f), t);
             return;
         }
 
         visual.color = Color.Lerp(new Color(1f, 0.08f, 0.28f, 0.85f), new Color(1f, 0.42f, 0.72f, 1f), pulse);
         glow.color = Color.Lerp(new Color(1f, 0.06f, 0.28f, 0.28f), new Color(1f, 0.32f, 0.68f, 0.48f), pulse);
+        zone.color = Color.Lerp(new Color(1f, 0.04f, 0.22f, 0.2f), new Color(1f, 0.18f, 0.5f, 0.34f), pulse);
+        label.color = Color.Lerp(new Color(1f, 0.56f, 0.68f, 0.82f), new Color(1f, 0.86f, 0.92f, 1f), pulse);
     }
 
     private static Color GetSafeColor()

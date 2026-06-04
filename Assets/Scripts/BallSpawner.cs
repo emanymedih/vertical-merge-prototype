@@ -12,7 +12,9 @@ public sealed class BallSpawner : MonoBehaviour
     private Camera gameCamera;
     private GameController controller;
     private SpriteRenderer previewRenderer;
+    private SpriteRenderer previewGlowRenderer;
     private SpriteRenderer guideRenderer;
+    private SpriteRenderer guideGlowRenderer;
     private float leftWall;
     private float rightWall;
     private float spawnY;
@@ -40,11 +42,29 @@ public sealed class BallSpawner : MonoBehaviour
         previewRenderer.sprite = CircleSpriteCache.Circle;
         previewRenderer.sortingOrder = 20;
 
+        var previewGlow = new GameObject("Ghost Ball Glow");
+        previewGlow.transform.SetParent(preview.transform);
+        previewGlow.transform.localPosition = Vector3.zero;
+        previewGlow.transform.localRotation = Quaternion.identity;
+        previewGlow.transform.localScale = Vector3.one * 1.22f;
+        previewGlowRenderer = previewGlow.AddComponent<SpriteRenderer>();
+        previewGlowRenderer.sprite = CircleSpriteCache.Circle;
+        previewGlowRenderer.sortingOrder = 19;
+
         var guide = new GameObject("Drop Guide");
         guide.transform.SetParent(transform);
         guideRenderer = guide.AddComponent<SpriteRenderer>();
         guideRenderer.sprite = CircleSpriteCache.Square;
-        guideRenderer.sortingOrder = 8;
+        guideRenderer.sortingOrder = 10;
+
+        var guideGlow = new GameObject("Drop Guide Glow");
+        guideGlow.transform.SetParent(guide.transform);
+        guideGlow.transform.localPosition = Vector3.zero;
+        guideGlow.transform.localRotation = Quaternion.identity;
+        guideGlow.transform.localScale = new Vector3(3.4f, 1f, 1f);
+        guideGlowRenderer = guideGlow.AddComponent<SpriteRenderer>();
+        guideGlowRenderer.sprite = CircleSpriteCache.Square;
+        guideGlowRenderer.sortingOrder = 9;
 
         spawnPosition = new Vector2(0f, spawnY);
         GenerateNextBall();
@@ -76,6 +96,7 @@ public sealed class BallSpawner : MonoBehaviour
         if (pressed)
         {
             isDragging = true;
+            OnboardingController.Instance?.BeginAiming();
         }
 
         if (isDragging && released)
@@ -112,6 +133,8 @@ public sealed class BallSpawner : MonoBehaviour
         controller.BeginDropWindow();
         lastDroppedBall = controller.SpawnBall(nextLevel, spawnPosition);
         lastDroppedBall.PlayPop();
+        SoundManager.Play(SoundEvent.Drop);
+        OnboardingController.Instance?.RegisterDrop();
         nextDropTime = Time.time + MinimumDropInterval;
         GenerateNextBall();
     }
@@ -133,14 +156,21 @@ public sealed class BallSpawner : MonoBehaviour
         previewRenderer.transform.position = spawnPosition;
         previewRenderer.transform.localScale = Vector3.one * Ball.GetDiameter(nextLevel);
         var color = CircleSpriteCache.GetBallColor(nextLevel);
-        color.a = canDrop ? 0.72f : 0.34f;
+        color.a = canDrop ? (isDragging ? 0.82f : 0.58f) : 0.3f;
         previewRenderer.color = color;
+
+        previewGlowRenderer.transform.localScale = Vector3.one * 1.22f;
+        var glowColor = CosmicBodyConfig.GetGlowColor(nextLevel);
+        glowColor.a = canDrop ? (isDragging ? 0.34f : 0.16f) : 0.06f;
+        previewGlowRenderer.color = glowColor;
 
         var guideHeight = Mathf.Max(0.1f, spawnPosition.y - guideBottomY);
         guideRenderer.transform.position = new Vector3(spawnPosition.x, guideBottomY + guideHeight * 0.5f, 0f);
-        guideRenderer.transform.localScale = new Vector3(0.035f, guideHeight, 1f);
-        var guideAlpha = canDrop ? (isDragging ? 0.34f : 0.14f) : 0.06f;
+        guideRenderer.transform.localScale = new Vector3(0.022f, guideHeight, 1f);
+        var guideAlpha = canDrop ? (isDragging ? 0.42f : 0.16f) : 0.06f;
         guideRenderer.color = new Color(dropGuideColor.r, dropGuideColor.g, dropGuideColor.b, guideAlpha);
+
+        guideGlowRenderer.color = new Color(dropGuideColor.r, dropGuideColor.g, dropGuideColor.b, guideAlpha * 0.32f);
     }
 
     private bool CanDrop()
@@ -166,9 +196,19 @@ public sealed class BallSpawner : MonoBehaviour
             previewRenderer.enabled = visible;
         }
 
+        if (previewGlowRenderer != null)
+        {
+            previewGlowRenderer.enabled = visible;
+        }
+
         if (guideRenderer != null)
         {
             guideRenderer.enabled = visible;
+        }
+
+        if (guideGlowRenderer != null)
+        {
+            guideGlowRenderer.enabled = visible;
         }
     }
 

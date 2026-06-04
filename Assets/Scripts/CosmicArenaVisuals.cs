@@ -2,7 +2,7 @@ using UnityEngine;
 
 public static class CosmicArenaVisuals
 {
-    private const int StarCount = 58;
+    private const int StarCount = 86;
 
     public static void Build(Camera cameraToUse, ContainerBounds bounds, Transform parent)
     {
@@ -18,9 +18,10 @@ public static class CosmicArenaVisuals
         var halfHeight = cameraToUse.orthographicSize;
         var visibleWidth = halfHeight * 2f * cameraToUse.aspect;
 
-        CreatePanel(parent, "Deep Space Backdrop", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(0.025f, 0.035f, 0.06f), -30);
-        CreatePanel(parent, "Upper Space Tint", new Vector2(0f, halfHeight * 0.36f), new Vector2(visibleWidth + 1.8f, halfHeight * 0.9f), new Color(0.04f, 0.06f, 0.11f, 0.42f), -29);
-        CreatePanel(parent, "Lower Space Shadow", new Vector2(0f, -halfHeight * 0.52f), new Vector2(visibleWidth + 1.8f, halfHeight * 0.75f), new Color(0.005f, 0.012f, 0.025f, 0.5f), -28);
+        CreatePanel(parent, "Deep Space Backdrop", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(0.01f, 0.014f, 0.032f), -40);
+        CreatePanel(parent, "Upper Nebula Haze", new Vector2(0f, halfHeight * 0.38f), new Vector2(visibleWidth + 1.8f, halfHeight * 0.96f), new Color(0.055f, 0.07f, 0.14f, 0.46f), -39);
+        CreatePanel(parent, "Lower Gravity Shadow", new Vector2(0f, -halfHeight * 0.5f), new Vector2(visibleWidth + 1.8f, halfHeight * 0.84f), new Color(0.002f, 0.006f, 0.018f, 0.64f), -38);
+        CreatePanel(parent, "Center Chamber Vignette", Vector2.zero, new Vector2(visibleWidth * 0.86f, halfHeight * 1.58f), new Color(0.08f, 0.13f, 0.19f, 0.12f), -37);
 
         var previousRandomState = Random.state;
         Random.InitState(1837);
@@ -29,7 +30,7 @@ public static class CosmicArenaVisuals
             var x = Random.Range(-visibleWidth * 0.5f, visibleWidth * 0.5f);
             var y = Random.Range(-halfHeight, halfHeight);
             var size = Random.Range(0.012f, 0.032f);
-            var alpha = Random.Range(0.12f, 0.34f);
+            var alpha = Random.Range(0.09f, 0.36f);
             CreateCircle(parent, "Distant Star", new Vector2(x, y), size, new Color(0.7f, 0.88f, 1f, alpha), -24);
         }
 
@@ -40,17 +41,23 @@ public static class CosmicArenaVisuals
     {
         var centerY = (bounds.Bottom + bounds.Top) * 0.5f;
         var height = bounds.Top - bounds.Bottom;
-        var cyanGlow = new Color(0.2f, 0.82f, 1f, 0.34f);
-        var wallCore = new Color(0.06f, 0.1f, 0.14f, 0.8f);
+        var cyanGlow = new Color(0.24f, 0.86f, 1f, 0.38f);
+        var wallCore = new Color(0.025f, 0.045f, 0.07f, 0.9f);
 
-        CreatePanel(parent, "Left Energy Wall", new Vector2(bounds.Left - 0.09f, centerY), new Vector2(0.18f, height), wallCore, 1);
-        CreatePanel(parent, "Right Energy Wall", new Vector2(bounds.Right + 0.09f, centerY), new Vector2(0.18f, height), wallCore, 1);
-        CreatePanel(parent, "Left Inner Glow", new Vector2(bounds.Left + 0.015f, centerY), new Vector2(0.035f, height), cyanGlow, 4);
-        CreatePanel(parent, "Right Inner Glow", new Vector2(bounds.Right - 0.015f, centerY), new Vector2(0.035f, height), cyanGlow, 4);
+        CreatePanel(parent, "Left Chamber Wall Core", new Vector2(bounds.Left - 0.12f, centerY), new Vector2(0.24f, height + 0.1f), wallCore, 1);
+        CreatePanel(parent, "Right Chamber Wall Core", new Vector2(bounds.Right + 0.12f, centerY), new Vector2(0.24f, height + 0.1f), wallCore, 1);
+        CreatePanel(parent, "Left Outer Energy Bloom", new Vector2(bounds.Left - 0.06f, centerY), new Vector2(0.32f, height), new Color(0.08f, 0.58f, 1f, 0.11f), 2);
+        CreatePanel(parent, "Right Outer Energy Bloom", new Vector2(bounds.Right + 0.06f, centerY), new Vector2(0.32f, height), new Color(0.08f, 0.58f, 1f, 0.11f), 2);
+        CreatePanel(parent, "Left Inner Energy Boundary", new Vector2(bounds.Left + 0.018f, centerY), new Vector2(0.036f, height), cyanGlow, 5);
+        CreatePanel(parent, "Right Inner Energy Boundary", new Vector2(bounds.Right - 0.018f, centerY), new Vector2(0.036f, height), cyanGlow, 5);
+        CreatePanel(parent, "Left Hot Boundary Core", new Vector2(bounds.Left + 0.034f, centerY), new Vector2(0.012f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6);
+        CreatePanel(parent, "Right Hot Boundary Core", new Vector2(bounds.Right - 0.034f, centerY), new Vector2(0.012f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6);
 
-        CreatePanel(parent, "Gravity Base", new Vector2(0f, bounds.Bottom - 0.1f), new Vector2(bounds.Width + 0.48f, 0.22f), new Color(0.05f, 0.13f, 0.18f, 0.88f), 1);
-        CreatePanel(parent, "Base Energy Glow", new Vector2(0f, bounds.Bottom + 0.015f), new Vector2(bounds.Width + 0.36f, 0.045f), new Color(0.24f, 0.84f, 1f, 0.46f), 4);
-        CreatePanel(parent, "Chamber Inner Shadow", new Vector2(0f, centerY), new Vector2(bounds.Width, height), new Color(0f, 0f, 0f, 0.08f), -1);
+        CreatePanel(parent, "Gravity Platform Body", new Vector2(0f, bounds.Bottom - 0.12f), new Vector2(bounds.Width + 0.5f, 0.24f), new Color(0.025f, 0.075f, 0.105f, 0.94f), 1);
+        CreatePanel(parent, "Gravity Platform Bloom", new Vector2(0f, bounds.Bottom + 0.02f), new Vector2(bounds.Width + 0.5f, 0.16f), new Color(0.08f, 0.66f, 1f, 0.16f), 3);
+        CreatePanel(parent, "Gravity Platform Hot Edge", new Vector2(0f, bounds.Bottom + 0.055f), new Vector2(bounds.Width + 0.32f, 0.042f), new Color(0.48f, 0.94f, 1f, 0.62f), 6);
+        CreatePanel(parent, "Chamber Interior Depth", new Vector2(0f, centerY), new Vector2(bounds.Width, height), new Color(0f, 0f, 0f, 0.13f), -1);
+        CreatePanel(parent, "Top Field Fade", new Vector2(0f, bounds.Top - 0.28f), new Vector2(bounds.Width + 0.4f, 0.56f), new Color(0.04f, 0.09f, 0.14f, 0.22f), 0);
     }
 
     private static void CreatePanel(Transform parent, string name, Vector2 position, Vector2 scale, Color color, int sortingOrder)

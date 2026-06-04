@@ -107,7 +107,8 @@ public sealed class GameController : MonoBehaviour
             highestMergedLevel = nextLevel;
         }
 
-        if (nextLevel > BestLargestLevel)
+        var newLargestRecordThisMerge = nextLevel > BestLargestLevel;
+        if (newLargestRecordThisMerge)
         {
             BestLargestLevel = nextLevel;
             newBestLargestThisRun = true;
@@ -115,7 +116,7 @@ public sealed class GameController : MonoBehaviour
             PlayerPrefs.Save();
         }
 
-        TryShowDiscovery(nextLevel);
+        var discoveredForFirstTime = TryShowDiscovery(nextLevel);
 
         var scoreToAdd = GetScoreForLevel(nextLevel);
         Score += scoreToAdd;
@@ -128,8 +129,21 @@ public sealed class GameController : MonoBehaviour
         }
 
         effects.PlayMerge(midpoint, nextLevel, scoreToAdd);
+        SoundManager.Play(nextLevel >= 6 ? SoundEvent.HighMergeBoom : SoundEvent.MergePop);
         pressureFloor?.ApplyMergeRelief(nextLevel);
         Haptics.LightImpact();
+        OnboardingController.Instance?.RegisterMerge();
+
+        if (newLargestRecordThisMerge)
+        {
+            gameUi.ShowMomentMessage("New Largest Record!");
+            SoundManager.Play(SoundEvent.NewRecord);
+        }
+        else if (discoveredForFirstTime && nextLevel >= 6)
+        {
+            SoundManager.Play(SoundEvent.NewRecord);
+        }
+
         RegisterMergeForChain();
         if (hadDangerPressure)
         {
@@ -169,7 +183,8 @@ public sealed class GameController : MonoBehaviour
         }
 
         IsGameOver = true;
-        gameUi.ShowGameOver(Score, BestScore, highestMergedLevel, BestLargestLevel, GetMotivationLine());
+        SoundManager.Play(SoundEvent.GameOver);
+        gameUi.ShowGameOver(Score, BestScore, highestMergedLevel, BestLargestLevel, newBestScoreThisRun, newBestLargestThisRun, GetMotivationLine());
     }
 
     public void Restart()
@@ -214,22 +229,23 @@ public sealed class GameController : MonoBehaviour
         gameUi.SetGoalLevel(CurrentGoalLevel, IsLevelDiscovered(CurrentGoalLevel));
     }
 
-    private void TryShowDiscovery(int level)
+    private bool TryShowDiscovery(int level)
     {
         if (level < 2)
         {
-            return;
+            return false;
         }
 
         var key = GetDiscoveredLevelKey(level);
         if (PlayerPrefs.HasKey(key))
         {
-            return;
+            return false;
         }
 
         PlayerPrefs.SetInt(key, 1);
         PlayerPrefs.Save();
         gameUi.ShowDiscoveryToast(level);
+        return true;
     }
 
     private string GetMotivationLine()
@@ -289,6 +305,7 @@ public sealed class GameController : MonoBehaviour
         {
             lastAnnouncedChainCount = 3;
             gameUi.ShowMomentMessage("Great Chain!");
+            SoundManager.Play(SoundEvent.Chain);
             return;
         }
 
@@ -296,6 +313,7 @@ public sealed class GameController : MonoBehaviour
         {
             lastAnnouncedChainCount = 2;
             gameUi.ShowMomentMessage("Chain!");
+            SoundManager.Play(SoundEvent.Chain);
         }
     }
 

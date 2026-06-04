@@ -173,6 +173,10 @@ public sealed class Ball : MonoBehaviour
         var other = collision.collider.GetComponent<Ball>();
         if (other == null || other == this || other.isMerging || other.Level != Level)
         {
+            if (collision.relativeVelocity.sqrMagnitude > 0.18f)
+            {
+                SoundManager.Play(SoundEvent.CollisionSoft);
+            }
             return;
         }
 

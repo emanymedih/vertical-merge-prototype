@@ -14,6 +14,8 @@ public sealed class GameBootstrap : MonoBehaviour
         var cameraToUse = CreateCamera();
         var bounds = ContainerBuilder.Build(cameraToUse);
 
+        SoundManager.Build();
+
         var effectsObject = new GameObject("Game Effects");
         var effects = effectsObject.AddComponent<GameEffects>();
         effects.Initialize(cameraToUse);
@@ -22,6 +24,7 @@ public sealed class GameBootstrap : MonoBehaviour
         var controller = controllerObject.AddComponent<GameController>();
         var ui = GameUi.Build(controller);
         controller.Initialize(ui, effects);
+        OnboardingController.Build();
 
         var dangerLineObject = new GameObject("Danger Line");
         var dangerLine = dangerLineObject.AddComponent<DangerLine>();
