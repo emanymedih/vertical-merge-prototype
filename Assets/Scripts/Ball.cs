@@ -32,20 +32,19 @@ public sealed class Ball : MonoBehaviour
         circleCollider = GetComponent<CircleCollider2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
 
-        targetScale = Vector3.one * GetDiameter(Level);
+        targetScale = Vector3.one * BallConfig.GetDiameter(Level);
         transform.localScale = targetScale;
 
-        var physicsT = GetPhysicsT(Level);
         body.useAutoMass = false;
-        body.gravityScale = Mathf.Lerp(1.0f, 1.08f, physicsT);
-        body.mass = CalculateMass(Level);
-        body.linearDamping = Mathf.Lerp(0.025f, 0.12f, physicsT);
-        body.angularDamping = Mathf.Lerp(0.08f, 0.32f, physicsT);
+        body.gravityScale = BallConfig.GetGravityScale(Level);
+        body.mass = BallConfig.GetMass(Level);
+        body.linearDamping = BallConfig.GetLinearDamping(Level);
+        body.angularDamping = BallConfig.GetAngularDamping(Level);
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         body.interpolation = RigidbodyInterpolation2D.Interpolate;
 
         circleCollider.radius = 0.5f;
-        circleCollider.density = Mathf.Lerp(0.65f, 1.55f, physicsT);
+        circleCollider.density = BallConfig.GetDensity(Level);
         circleCollider.sharedMaterial = PhysicsMaterials.GetBallMaterial(Level);
 
         spriteRenderer.sprite = CircleSpriteCache.Circle;
@@ -57,20 +56,7 @@ public sealed class Ball : MonoBehaviour
 
     public static float GetDiameter(int level)
     {
-        return Mathf.Min(0.72f + (level - 1) * 0.12f, 1.85f);
-    }
-
-    private static float CalculateMass(int level)
-    {
-        var radius = GetDiameter(level) * 0.5f;
-        var area = Mathf.PI * radius * radius;
-        var density = Mathf.Lerp(0.65f, 1.55f, GetPhysicsT(level));
-        return Mathf.Clamp(area * density, 0.22f, 5.2f);
-    }
-
-    private static float GetPhysicsT(int level)
-    {
-        return Mathf.Clamp01((level - 1) / 9f);
+        return BallConfig.GetDiameter(level);
     }
 
     public bool IsEligibleForDanger(float dangerLineY)

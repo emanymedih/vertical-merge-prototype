@@ -10,11 +10,10 @@ public static class PhysicsMaterials
     {
         if (!ballMaterials.TryGetValue(level, out var material))
         {
-            var physicsT = Mathf.Clamp01((level - 1) / 9f);
             material = new PhysicsMaterial2D($"Generated Ball Material L{level}")
             {
-                friction = Mathf.Lerp(0.24f, 0.48f, physicsT),
-                bounciness = Mathf.Lerp(0.16f, 0.035f, physicsT)
+                friction = BallConfig.GetFriction(level),
+                bounciness = BallConfig.GetBounciness(level)
             };
             ballMaterials.Add(level, material);
         }

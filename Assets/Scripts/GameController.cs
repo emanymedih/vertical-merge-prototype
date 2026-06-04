@@ -25,11 +25,13 @@ public sealed class GameController : MonoBehaviour
     private GameEffects effects;
     private Transform ballParent;
     private int nextBallId;
+    private int highestMergedLevel = 1;
 
     public int Score { get; private set; }
     public int BestScore { get; private set; }
     public bool IsGameOver { get; private set; }
     public IReadOnlyList<Ball> ActiveBalls => activeBalls;
+    public int HighestMergedLevel => highestMergedLevel;
 
     public int GetNextBallId()
     {
@@ -77,7 +79,13 @@ public sealed class GameController : MonoBehaviour
         var mergedBall = SpawnBall(nextLevel, midpoint);
         mergedBall.PlayPop();
 
-        Score += GetScoreForLevel(nextLevel);
+        if (nextLevel > highestMergedLevel)
+        {
+            highestMergedLevel = nextLevel;
+        }
+
+        var scoreToAdd = GetScoreForLevel(nextLevel);
+        Score += scoreToAdd;
         if (Score > BestScore)
         {
             BestScore = Score;
@@ -85,9 +93,14 @@ public sealed class GameController : MonoBehaviour
             PlayerPrefs.Save();
         }
 
-        effects.PlayMerge(midpoint, nextLevel);
+        effects.PlayMerge(midpoint, nextLevel, scoreToAdd);
         Haptics.LightImpact();
         UpdateUi();
+    }
+
+    public int GetNextSpawnLevel()
+    {
+        return BallConfig.PickSpawnLevel(highestMergedLevel);
     }
 
     public void TriggerGameOver()
