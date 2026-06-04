@@ -21,6 +21,12 @@ public sealed class OpeningDemoController : MonoBehaviour
         return !PlayerPrefs.HasKey(OpeningDemoCompletedKey);
     }
 
+    public static void ResetProgress()
+    {
+        PlayerPrefs.DeleteKey(OpeningDemoCompletedKey);
+        PlayerPrefs.Save();
+    }
+
     public static OpeningDemoController Build(GameController gameController, ContainerBounds containerBounds)
     {
         if (!ShouldPlayOpeningDemo())

@@ -120,6 +120,7 @@ public sealed class OnboardingController : MonoBehaviour
         if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.O))
         {
             ResetProgress();
+            OpeningDemoController.ResetProgress();
             completed = false;
             dropCount = 0;
             isAiming = false;
