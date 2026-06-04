@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 26
+  productGUID: 9b96ef08c7eb441a95d5867c7d40d27f
+  companyName: DefaultCompany
+  productName: Vertical Merge Prototype
+  defaultScreenOrientation: 1
+  targetDevice: 2
+  useOnDemandResources: 0
+  accelerometerFrequency: 60
+  applicationIdentifier:
+    Standalone: com.DefaultCompany.VerticalMergePrototype
+    iPhone: com.DefaultCompany.VerticalMergePrototype
+  iOSLaunchScreenType: 0
+  iOSRequiresPersistentWiFi: 0
+  iOSAllowHTTPDownload: 1
+  iOSURLSchemes: []
+  iOSBackgroundModes: 0
+  iOSMetalForceHardShadows: 0
+  iOSRenderExtraFrameOnPause: 1
+  iOSCopyPluginsCodeInsteadOfSymlink: 0
+  appleEnableAutomaticSigning: 0
+  iOSRequireARKit: 0
+  activeInputHandler: 0
+  stripEngineCode: 1
