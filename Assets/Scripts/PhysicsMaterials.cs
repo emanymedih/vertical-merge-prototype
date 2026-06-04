@@ -1,25 +1,25 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class PhysicsMaterials
 {
-    private static PhysicsMaterial2D ballMaterial;
+    private static readonly Dictionary<int, PhysicsMaterial2D> ballMaterials = new Dictionary<int, PhysicsMaterial2D>();
     private static PhysicsMaterial2D wallMaterial;
 
-    public static PhysicsMaterial2D BallMaterial
+    public static PhysicsMaterial2D GetBallMaterial(int level)
     {
-        get
+        if (!ballMaterials.TryGetValue(level, out var material))
         {
-            if (ballMaterial == null)
+            var physicsT = Mathf.Clamp01((level - 1) / 9f);
+            material = new PhysicsMaterial2D($"Generated Ball Material L{level}")
             {
-                ballMaterial = new PhysicsMaterial2D("Generated Ball Material")
-                {
-                    friction = 0.25f,
-                    bounciness = 0.08f
-                };
-            }
-
-            return ballMaterial;
+                friction = Mathf.Lerp(0.24f, 0.48f, physicsT),
+                bounciness = Mathf.Lerp(0.16f, 0.035f, physicsT)
+            };
+            ballMaterials.Add(level, material);
         }
+
+        return material;
     }
 
     public static PhysicsMaterial2D WallMaterial

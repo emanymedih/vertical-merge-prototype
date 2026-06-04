@@ -32,22 +32,25 @@ public sealed class Ball : MonoBehaviour
         circleCollider = GetComponent<CircleCollider2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
 
-        body.gravityScale = 1f;
-        body.mass = Mathf.Lerp(0.8f, 2.4f, Mathf.Clamp01(level / 8f));
-        body.linearDamping = 0.05f;
-        body.angularDamping = 0.15f;
+        targetScale = Vector3.one * GetDiameter(Level);
+        transform.localScale = targetScale;
+
+        var physicsT = GetPhysicsT(Level);
+        body.useAutoMass = false;
+        body.gravityScale = Mathf.Lerp(1.0f, 1.08f, physicsT);
+        body.mass = CalculateMass(Level);
+        body.linearDamping = Mathf.Lerp(0.025f, 0.12f, physicsT);
+        body.angularDamping = Mathf.Lerp(0.08f, 0.32f, physicsT);
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         body.interpolation = RigidbodyInterpolation2D.Interpolate;
 
         circleCollider.radius = 0.5f;
-        circleCollider.sharedMaterial = PhysicsMaterials.BallMaterial;
+        circleCollider.density = Mathf.Lerp(0.65f, 1.55f, physicsT);
+        circleCollider.sharedMaterial = PhysicsMaterials.GetBallMaterial(Level);
 
         spriteRenderer.sprite = CircleSpriteCache.Circle;
         spriteRenderer.color = CircleSpriteCache.GetBallColor(Level);
         spriteRenderer.sortingOrder = 5 + Level;
-
-        targetScale = Vector3.one * GetDiameter(Level);
-        transform.localScale = targetScale;
 
         controller.RegisterBall(this);
     }
@@ -55,6 +58,19 @@ public sealed class Ball : MonoBehaviour
     public static float GetDiameter(int level)
     {
         return Mathf.Min(0.72f + (level - 1) * 0.12f, 1.85f);
+    }
+
+    private static float CalculateMass(int level)
+    {
+        var radius = GetDiameter(level) * 0.5f;
+        var area = Mathf.PI * radius * radius;
+        var density = Mathf.Lerp(0.65f, 1.55f, GetPhysicsT(level));
+        return Mathf.Clamp(area * density, 0.22f, 5.2f);
+    }
+
+    private static float GetPhysicsT(int level)
+    {
+        return Mathf.Clamp01((level - 1) / 9f);
     }
 
     public bool IsEligibleForDanger(float dangerLineY)
