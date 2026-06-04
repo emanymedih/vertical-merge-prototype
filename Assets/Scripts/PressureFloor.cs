@@ -4,9 +4,9 @@ using UnityEngine;
 public sealed class PressureFloor : MonoBehaviour
 {
     private const float InitialDelaySeconds = 8f;
-    private const float BaseRiseSpeed = 0.026f;
-    private const float RiseAcceleration = 0.000025f;
-    private const float MaxRiseSpeed = 0.045f;
+    private const float BaseRiseSpeed = 0.038f;
+    private const float RiseAcceleration = 0.00004f;
+    private const float MaxRiseSpeed = 0.065f;
     private const float SurfaceThickness = 0.16f;
 
     private GameController controller;
