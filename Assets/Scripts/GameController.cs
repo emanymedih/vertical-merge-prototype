@@ -50,6 +50,8 @@ public sealed class GameController : MonoBehaviour
     public int BestScore { get; private set; }
     public int BestLargestLevel { get; private set; }
     public bool IsGameOver { get; private set; }
+    public bool IsInputLocked { get; private set; }
+    public bool IsOpeningDemoActive { get; private set; }
     public IReadOnlyList<Ball> ActiveBalls => activeBalls;
     public int HighestMergedLevel => highestMergedLevel;
     public int CurrentGoalLevel => Mathf.Max(3, highestMergedLevel + 1);
@@ -92,7 +94,11 @@ public sealed class GameController : MonoBehaviour
         }
 
         var hadDangerPressure = dangerPressure >= savedDangerThreshold;
-        runMergeCount++;
+        var suppressRunProgress = IsOpeningDemoActive;
+        if (!suppressRunProgress)
+        {
+            runMergeCount++;
+        }
 
         first.MarkMerging();
         second.MarkMerging();
@@ -112,7 +118,7 @@ public sealed class GameController : MonoBehaviour
         }
 
         var newLargestRecordThisMerge = nextLevel > BestLargestLevel;
-        if (newLargestRecordThisMerge)
+        if (newLargestRecordThisMerge && !suppressRunProgress)
         {
             BestLargestLevel = nextLevel;
             newBestLargestThisRun = true;
@@ -120,25 +126,31 @@ public sealed class GameController : MonoBehaviour
             PlayerPrefs.Save();
         }
 
-        var discoveredForFirstTime = TryShowDiscovery(nextLevel);
+        var discoveredForFirstTime = !suppressRunProgress && TryShowDiscovery(nextLevel);
 
         var scoreToAdd = GetScoreForLevel(nextLevel);
-        Score += scoreToAdd;
-        if (Score > BestScore)
+        if (!suppressRunProgress)
         {
-            BestScore = Score;
-            newBestScoreThisRun = true;
-            PlayerPrefs.SetInt(BestScoreKey, BestScore);
-            PlayerPrefs.Save();
+            Score += scoreToAdd;
+            if (Score > BestScore)
+            {
+                BestScore = Score;
+                newBestScoreThisRun = true;
+                PlayerPrefs.SetInt(BestScoreKey, BestScore);
+                PlayerPrefs.Save();
+            }
         }
 
-        effects.PlayMerge(midpoint, nextLevel, scoreToAdd);
+        effects.PlayMerge(midpoint, nextLevel, suppressRunProgress ? 0 : scoreToAdd);
         SoundManager.Play(nextLevel >= 6 ? SoundEvent.HighMergeBoom : SoundEvent.MergePop);
         pressureFloor?.ApplyMergeRelief(nextLevel);
         Haptics.LightImpact();
-        OnboardingController.Instance?.RegisterMerge();
+        if (!suppressRunProgress)
+        {
+            OnboardingController.Instance?.RegisterMerge();
+        }
 
-        if (newLargestRecordThisMerge)
+        if (newLargestRecordThisMerge && !suppressRunProgress)
         {
             gameUi.ShowMomentMessage("New Largest Record!");
             SoundManager.Play(SoundEvent.NewRecord);
@@ -148,10 +160,13 @@ public sealed class GameController : MonoBehaviour
             SoundManager.Play(SoundEvent.NewRecord);
         }
 
-        RegisterMergeForChain();
-        if (hadDangerPressure)
+        if (!suppressRunProgress)
         {
-            StartCoroutine(SavedCheckRoutine());
+            RegisterMergeForChain();
+            if (hadDangerPressure)
+            {
+                StartCoroutine(SavedCheckRoutine());
+            }
         }
 
         UpdateUi();
@@ -172,6 +187,19 @@ public sealed class GameController : MonoBehaviour
     public void SetDangerPressure(float pressure)
     {
         dangerPressure = Mathf.Clamp01(pressure);
+    }
+
+    public void BeginOpeningDemo()
+    {
+        IsOpeningDemoActive = true;
+        IsInputLocked = true;
+    }
+
+    public void EndOpeningDemo()
+    {
+        IsOpeningDemoActive = false;
+        IsInputLocked = false;
+        UpdateUi();
     }
 
     public int GetNextSpawnLevel()

@@ -20,7 +20,11 @@ public sealed class GameEffects : MonoBehaviour
     public void PlayMerge(Vector2 position, int level, int score)
     {
         StartCoroutine(MergeFlashRoutine(position, level));
-        StartCoroutine(FloatingScoreRoutine(position, score, level));
+        if (score > 0)
+        {
+            StartCoroutine(FloatingScoreRoutine(position, score, level));
+        }
+
         PlayParticles(position, level);
 
         if (level >= highImpactLevel)

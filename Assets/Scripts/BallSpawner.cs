@@ -73,7 +73,7 @@ public sealed class BallSpawner : MonoBehaviour
 
     private void Update()
     {
-        if (controller == null || controller.IsGameOver)
+        if (controller == null || controller.IsGameOver || controller.IsInputLocked)
         {
             SetPreviewVisible(false);
             ClearResonance();

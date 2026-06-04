@@ -29,6 +29,18 @@ public sealed class OnboardingController : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    public void ResumeAfterOpeningDemo()
+    {
+        if (completed)
+        {
+            return;
+        }
+
+        isAiming = false;
+        dangerActive = false;
+        ShowPrompt("Drag to aim");
+    }
+
     public void BeginAiming()
     {
         if (completed)
@@ -94,7 +106,7 @@ public sealed class OnboardingController : MonoBehaviour
         completed = PlayerPrefs.HasKey(OnboardingCompletedKey);
         CreateUi();
 
-        if (completed)
+        if (completed || OpeningDemoController.ShouldPlayOpeningDemo())
         {
             promptObject.SetActive(false);
             return;

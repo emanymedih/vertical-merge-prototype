@@ -38,6 +38,8 @@ public sealed class GameBootstrap : MonoBehaviour
         var spawnerObject = new GameObject("Ball Spawner");
         var spawner = spawnerObject.AddComponent<BallSpawner>();
         spawner.Initialize(cameraToUse, controller, bounds.Left, bounds.Right, bounds.Bottom, bounds.Top - 0.25f);
+
+        OpeningDemoController.Build(controller, bounds);
     }
 
     private static Camera CreateCamera()
