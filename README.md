@@ -33,3 +33,7 @@ Minimal Unity 2D iOS prototype for a portrait physics merge game.
 4. Improve mobile input feel and safe-area layout.
 5. Prepare an iOS build target and test on device.
 6. Add polish only after the core loop feels reliable.
+
+## Future Ideas
+
+Future mechanics are tracked in `Docs/DesignNotes.md`. They should stay out of the prototype until the base loop feels good.
