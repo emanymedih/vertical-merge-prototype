@@ -23,6 +23,7 @@ public sealed class GameController : MonoBehaviour
     private readonly List<Ball> activeBalls = new List<Ball>();
     private GameUi gameUi;
     private GameEffects effects;
+    private PressureFloor pressureFloor;
     private Transform ballParent;
     private int nextBallId;
     private int highestMergedLevel = 1;
@@ -94,8 +95,14 @@ public sealed class GameController : MonoBehaviour
         }
 
         effects.PlayMerge(midpoint, nextLevel, scoreToAdd);
+        pressureFloor?.ApplyMergeRelief(nextLevel);
         Haptics.LightImpact();
         UpdateUi();
+    }
+
+    public void SetPressureFloor(PressureFloor floor)
+    {
+        pressureFloor = floor;
     }
 
     public int GetNextSpawnLevel()

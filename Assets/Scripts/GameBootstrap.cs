@@ -27,6 +27,11 @@ public sealed class GameBootstrap : MonoBehaviour
         var dangerLine = dangerLineObject.AddComponent<DangerLine>();
         dangerLine.Initialize(controller, bounds.DangerY, bounds.Width);
 
+        var pressureFloorObject = new GameObject("Pressure Floor");
+        var pressureFloor = pressureFloorObject.AddComponent<PressureFloor>();
+        pressureFloor.Initialize(controller, bounds);
+        controller.SetPressureFloor(pressureFloor);
+
         var spawnerObject = new GameObject("Ball Spawner");
         var spawner = spawnerObject.AddComponent<BallSpawner>();
         spawner.Initialize(cameraToUse, controller, bounds.Left, bounds.Right, bounds.Bottom, bounds.Top - 0.25f);
