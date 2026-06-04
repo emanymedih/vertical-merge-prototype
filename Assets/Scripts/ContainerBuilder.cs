@@ -33,11 +33,14 @@ public static class ContainerBuilder
         var dangerY = top - 1.9f;
 
         var root = new GameObject("Container");
-        CreateWall(root.transform, "Left Wall", new Vector2(left - 0.12f, (bottom + top) * 0.5f), new Vector2(0.24f, top - bottom), new Color(0.16f, 0.18f, 0.21f));
-        CreateWall(root.transform, "Right Wall", new Vector2(right + 0.12f, (bottom + top) * 0.5f), new Vector2(0.24f, top - bottom), new Color(0.16f, 0.18f, 0.21f));
-        CreateWall(root.transform, "Bottom Wall", new Vector2(0f, bottom - 0.12f), new Vector2(containerWidth + 0.48f, 0.24f), new Color(0.16f, 0.18f, 0.21f));
+        var wallColor = new Color(0.045f, 0.07f, 0.09f, 0.92f);
+        CreateWall(root.transform, "Left Wall", new Vector2(left - 0.12f, (bottom + top) * 0.5f), new Vector2(0.24f, top - bottom), wallColor);
+        CreateWall(root.transform, "Right Wall", new Vector2(right + 0.12f, (bottom + top) * 0.5f), new Vector2(0.24f, top - bottom), wallColor);
+        CreateWall(root.transform, "Bottom Wall", new Vector2(0f, bottom - 0.12f), new Vector2(containerWidth + 0.48f, 0.24f), wallColor);
 
-        return new ContainerBounds(left, right, bottom, top, dangerY);
+        var bounds = new ContainerBounds(left, right, bottom, top, dangerY);
+        CosmicArenaVisuals.Build(cameraToUse, bounds, root.transform);
+        return bounds;
     }
 
     private static void CreateWall(Transform parent, string name, Vector2 position, Vector2 size, Color color)

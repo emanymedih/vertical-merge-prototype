@@ -4,6 +4,11 @@ public sealed class BallSpawner : MonoBehaviour
 {
     private const float MinimumDropInterval = 0.45f;
 
+    [SerializeField] private float resonanceStrength = 0.58f;
+    [SerializeField] private float anticipationStrength = 1f;
+    [SerializeField] private float anticipationHorizontalPadding = 0.35f;
+    [SerializeField] private Color dropGuideColor = new Color(0.24f, 0.84f, 1f, 1f);
+
     private Camera gameCamera;
     private GameController controller;
     private SpriteRenderer previewRenderer;
@@ -39,7 +44,7 @@ public sealed class BallSpawner : MonoBehaviour
         guide.transform.SetParent(transform);
         guideRenderer = guide.AddComponent<SpriteRenderer>();
         guideRenderer.sprite = CircleSpriteCache.Square;
-        guideRenderer.sortingOrder = 4;
+        guideRenderer.sortingOrder = 8;
 
         spawnPosition = new Vector2(0f, spawnY);
         GenerateNextBall();
@@ -51,11 +56,13 @@ public sealed class BallSpawner : MonoBehaviour
         if (controller == null || controller.IsGameOver)
         {
             SetPreviewVisible(false);
+            ClearResonance();
             return;
         }
 
         HandlePointer();
         UpdatePreview();
+        UpdateResonance();
     }
 
     private void HandlePointer()
@@ -101,6 +108,8 @@ public sealed class BallSpawner : MonoBehaviour
 
     private void DropCurrentBall()
     {
+        ClearResonance();
+        controller.BeginDropWindow();
         lastDroppedBall = controller.SpawnBall(nextLevel, spawnPosition);
         lastDroppedBall.PlayPop();
         nextDropTime = Time.time + MinimumDropInterval;
@@ -130,7 +139,8 @@ public sealed class BallSpawner : MonoBehaviour
         var guideHeight = Mathf.Max(0.1f, spawnPosition.y - guideBottomY);
         guideRenderer.transform.position = new Vector3(spawnPosition.x, guideBottomY + guideHeight * 0.5f, 0f);
         guideRenderer.transform.localScale = new Vector3(0.035f, guideHeight, 1f);
-        guideRenderer.color = new Color(color.r, color.g, color.b, canDrop ? (isDragging ? 0.35f : 0.18f) : 0.08f);
+        var guideAlpha = canDrop ? (isDragging ? 0.34f : 0.14f) : 0.06f;
+        guideRenderer.color = new Color(dropGuideColor.r, dropGuideColor.g, dropGuideColor.b, guideAlpha);
     }
 
     private bool CanDrop()
@@ -160,5 +170,66 @@ public sealed class BallSpawner : MonoBehaviour
         {
             guideRenderer.enabled = visible;
         }
+    }
+
+    private void UpdateResonance()
+    {
+        if (!isDragging || !CanDrop())
+        {
+            ClearResonance();
+            return;
+        }
+
+        Ball emphasizedBall = null;
+        var closestOffset = float.MaxValue;
+
+        foreach (var ball in controller.ActiveBalls)
+        {
+            if (!CanResonate(ball))
+            {
+                continue;
+            }
+
+            var xOffset = Mathf.Abs(ball.transform.position.x - spawnPosition.x);
+            var anticipationRange = BallConfig.GetRadius(nextLevel) + ball.Radius + anticipationHorizontalPadding;
+            if (xOffset <= anticipationRange && xOffset < closestOffset)
+            {
+                closestOffset = xOffset;
+                emphasizedBall = ball;
+            }
+        }
+
+        foreach (var ball in controller.ActiveBalls)
+        {
+            if (!CanResonate(ball))
+            {
+                ball?.ClearResonance();
+                continue;
+            }
+
+            var emphasized = ball == emphasizedBall;
+            ball.SetResonance(emphasized ? anticipationStrength : resonanceStrength, emphasized);
+        }
+    }
+
+    private void ClearResonance()
+    {
+        if (controller == null)
+        {
+            return;
+        }
+
+        foreach (var ball in controller.ActiveBalls)
+        {
+            if (ball != null)
+            {
+                ball.ClearResonance();
+            }
+        }
+    }
+
+    private bool CanResonate(Ball ball)
+    {
+        return ball != null && !ball.IsMerging && ball.Level == nextLevel;
     }
 }

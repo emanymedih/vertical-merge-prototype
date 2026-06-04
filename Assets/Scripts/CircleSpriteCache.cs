@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public static class CircleSpriteCache
@@ -45,21 +44,8 @@ public static class CircleSpriteCache
 
     public static Color GetBallColor(int level)
     {
-        var colors = Palette;
-        return colors[Mathf.Abs(level - 1) % colors.Count];
+        return CosmicBodyConfig.GetBaseColor(level);
     }
-
-    private static IReadOnlyList<Color> Palette { get; } = new[]
-    {
-        new Color(0.20f, 0.72f, 0.95f),
-        new Color(0.35f, 0.86f, 0.52f),
-        new Color(1.00f, 0.76f, 0.26f),
-        new Color(1.00f, 0.45f, 0.35f),
-        new Color(0.67f, 0.45f, 1.00f),
-        new Color(1.00f, 0.42f, 0.72f),
-        new Color(0.40f, 0.92f, 0.82f),
-        new Color(0.95f, 0.95f, 0.95f)
-    };
 
     private static Sprite CreateCircleSprite()
     {

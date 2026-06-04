@@ -1,0 +1,136 @@
+using UnityEngine;
+
+public sealed class CosmicBodyVisual : MonoBehaviour
+{
+    [SerializeField] private float glowScale = 1.18f;
+    [SerializeField] private float strongGlowScale = 1.28f;
+    [SerializeField] private float ringScaleX = 1.34f;
+    [SerializeField] private float ringScaleY = 0.34f;
+    [SerializeField] private float spotAlpha = 0.72f;
+    [SerializeField] private float bandAlpha = 0.46f;
+
+    private SpriteRenderer mainRenderer;
+    private Transform visualRoot;
+
+    public void Initialize(int level, SpriteRenderer rendererToUse)
+    {
+        mainRenderer = rendererToUse;
+        var metadata = CosmicBodyConfig.Get(level);
+        mainRenderer.color = metadata.BaseColor;
+
+        visualRoot = new GameObject("Cosmic Visual").transform;
+        visualRoot.SetParent(transform);
+        visualRoot.localPosition = Vector3.zero;
+        visualRoot.localRotation = Quaternion.identity;
+        visualRoot.localScale = Vector3.one;
+
+        BuildVisual(metadata);
+    }
+
+    private void BuildVisual(CosmicBodyMetadata metadata)
+    {
+        switch (metadata.VisualType)
+        {
+            case CosmicVisualType.Asteroid:
+                AddSpots(metadata.DetailColor, new[] { new Vector2(-0.18f, 0.12f), new Vector2(0.18f, -0.08f), new Vector2(0.02f, -0.24f) }, new[] { 0.18f, 0.14f, 0.1f });
+                break;
+            case CosmicVisualType.Moon:
+                AddSpots(metadata.DetailColor, new[] { new Vector2(-0.16f, 0.16f), new Vector2(0.18f, 0.02f), new Vector2(-0.02f, -0.22f) }, new[] { 0.16f, 0.11f, 0.13f });
+                break;
+            case CosmicVisualType.Planet:
+                AddSpots(metadata.DetailColor, new[] { new Vector2(-0.16f, 0.05f), new Vector2(0.18f, -0.12f) }, new[] { 0.22f, 0.18f });
+                break;
+            case CosmicVisualType.BluePlanet:
+                AddGlow(metadata.GlowColor, 0.2f, glowScale);
+                AddSpots(metadata.DetailColor, new[] { new Vector2(-0.12f, 0.16f), new Vector2(0.2f, -0.08f), new Vector2(-0.24f, -0.16f) }, new[] { 0.19f, 0.15f, 0.1f });
+                break;
+            case CosmicVisualType.GasGiant:
+                AddBand(new Vector2(0f, 0.17f), 0.78f, 0.08f, metadata.DetailColor, 0.34f);
+                AddBand(new Vector2(0f, -0.04f), 0.86f, 0.1f, Color.Lerp(metadata.DetailColor, Color.white, 0.2f), bandAlpha);
+                AddBand(new Vector2(0f, -0.24f), 0.64f, 0.07f, metadata.DetailColor, 0.28f);
+                break;
+            case CosmicVisualType.Star:
+                AddGlow(metadata.GlowColor, 0.32f, strongGlowScale);
+                AddCore(metadata.DetailColor, 0.38f, 0.58f);
+                break;
+            case CosmicVisualType.RedGiant:
+                AddGlow(metadata.GlowColor, 0.38f, strongGlowScale + 0.08f);
+                AddCore(metadata.DetailColor, 0.34f, 0.48f);
+                AddBand(new Vector2(0f, -0.12f), 0.62f, 0.08f, metadata.DetailColor, 0.24f);
+                break;
+            case CosmicVisualType.NeutronStar:
+                AddGlow(metadata.GlowColor, 0.44f, strongGlowScale);
+                AddCore(metadata.DetailColor, 0.28f, 0.82f);
+                AddRing(metadata.GlowColor, 0.44f, 1.12f, 0.22f);
+                break;
+            case CosmicVisualType.BlackHole:
+                AddGlow(metadata.GlowColor, 0.36f, strongGlowScale + 0.1f);
+                AddRing(metadata.GlowColor, 0.78f, ringScaleX, ringScaleY);
+                AddCore(Color.black, 0.52f, 0.62f);
+                break;
+            case CosmicVisualType.GalaxyCore:
+                AddGlow(metadata.GlowColor, 0.46f, strongGlowScale + 0.14f);
+                AddRing(metadata.DetailColor, 0.6f, 1.22f, 0.28f);
+                AddCore(metadata.DetailColor, 0.48f, 0.34f);
+                AddCore(Color.white, 0.24f, 0.82f, 3);
+                break;
+        }
+    }
+
+    private void AddSpots(Color color, Vector2[] positions, float[] sizes)
+    {
+        var spotColor = color;
+        spotColor.a = spotAlpha;
+        for (var i = 0; i < positions.Length; i++)
+        {
+            AddCircle("Surface Spot", positions[i], sizes[i], spotColor, mainRenderer.sortingOrder + 1);
+        }
+    }
+
+    private void AddGlow(Color color, float alpha, float scale)
+    {
+        var glowColor = color;
+        glowColor.a = alpha;
+        AddCircle("Body Glow", Vector2.zero, scale, glowColor, mainRenderer.sortingOrder - 2);
+    }
+
+    private void AddCore(Color color, float scale, float alpha, int sortingOffset = 2)
+    {
+        var coreColor = color;
+        coreColor.a = alpha;
+        AddCircle("Body Core", Vector2.zero, scale, coreColor, mainRenderer.sortingOrder + sortingOffset);
+    }
+
+    private void AddRing(Color color, float alpha, float scaleX, float scaleY)
+    {
+        var ringColor = color;
+        ringColor.a = alpha;
+        AddShape("Energy Ring", Vector2.zero, new Vector2(scaleX, scaleY), ringColor, mainRenderer.sortingOrder + 1, CircleSpriteCache.Circle);
+    }
+
+    private void AddBand(Vector2 position, float width, float height, Color color, float alpha)
+    {
+        var bandColor = color;
+        bandColor.a = alpha;
+        AddShape("Atmosphere Band", position, new Vector2(width, height), bandColor, mainRenderer.sortingOrder + 1, CircleSpriteCache.Square);
+    }
+
+    private void AddCircle(string name, Vector2 position, float scale, Color color, int sortingOrder)
+    {
+        AddShape(name, position, new Vector2(scale, scale), color, sortingOrder, CircleSpriteCache.Circle);
+    }
+
+    private void AddShape(string name, Vector2 position, Vector2 scale, Color color, int sortingOrder, Sprite sprite)
+    {
+        var shape = new GameObject(name);
+        shape.transform.SetParent(visualRoot);
+        shape.transform.localPosition = position;
+        shape.transform.localRotation = Quaternion.identity;
+        shape.transform.localScale = new Vector3(scale.x, scale.y, 1f);
+
+        var renderer = shape.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.color = color;
+        renderer.sortingOrder = sortingOrder;
+    }
+}

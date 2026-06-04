@@ -13,10 +13,19 @@ public sealed class Ball : MonoBehaviour
     private const float StackNudgeForce = 0.72f;
     private const float StackNudgeTorque = 0.16f;
 
+    [SerializeField] private float popBaseOvershoot = 1.13f;
+    [SerializeField] private float popMaxOvershoot = 1.22f;
+    [SerializeField] private float resonanceNormalBrightness = 0.2f;
+    [SerializeField] private float resonanceEmphasizedBrightness = 0.34f;
+    [SerializeField] private float resonanceNormalMaxScale = 1.2f;
+    [SerializeField] private float resonanceEmphasizedMaxScale = 1.28f;
+
     private GameController controller;
     private Rigidbody2D body;
     private CircleCollider2D circleCollider;
     private SpriteRenderer spriteRenderer;
+    private SpriteRenderer resonanceGlow;
+    private Color baseColor;
     private bool isMerging;
     private Vector3 targetScale;
 
@@ -49,12 +58,15 @@ public sealed class Ball : MonoBehaviour
         body.interpolation = RigidbodyInterpolation2D.Interpolate;
 
         circleCollider.radius = 0.5f;
-        circleCollider.density = BallConfig.GetDensity(Level);
         circleCollider.sharedMaterial = PhysicsMaterials.GetBallMaterial(Level);
 
         spriteRenderer.sprite = CircleSpriteCache.Circle;
-        spriteRenderer.color = CircleSpriteCache.GetBallColor(Level);
+        baseColor = CircleSpriteCache.GetBallColor(Level);
+        spriteRenderer.color = baseColor;
         spriteRenderer.sortingOrder = 5 + Level;
+
+        var bodyVisual = gameObject.AddComponent<CosmicBodyVisual>();
+        bodyVisual.Initialize(Level, spriteRenderer);
 
         controller.RegisterBall(this);
     }
@@ -109,10 +121,46 @@ public sealed class Ball : MonoBehaviour
         }
     }
 
-    public void PlayPop()
+    public void PlayPop(float intensity = 1f)
     {
         StopAllCoroutines();
-        StartCoroutine(PopRoutine());
+        StartCoroutine(PopRoutine(intensity));
+    }
+
+    public void SetResonance(float strength, bool emphasized)
+    {
+        if (isMerging || spriteRenderer == null)
+        {
+            return;
+        }
+
+        EnsureResonanceGlow();
+
+        var clampedStrength = Mathf.Clamp01(strength);
+        var brightness = emphasized ? resonanceEmphasizedBrightness : resonanceNormalBrightness;
+        spriteRenderer.color = Color.Lerp(baseColor, Color.white, clampedStrength * brightness);
+
+        var pulse = Mathf.Sin(Time.time * (emphasized ? 8.5f : 6.5f)) * 0.5f + 0.5f;
+        var glowAlpha = Mathf.Lerp(0.12f, emphasized ? 0.34f : 0.22f, pulse) * clampedStrength;
+        var maxGlowScale = emphasized ? resonanceEmphasizedMaxScale : resonanceNormalMaxScale;
+        var glowScale = Mathf.Lerp(1.14f, maxGlowScale, pulse) + clampedStrength * 0.05f;
+
+        resonanceGlow.color = new Color(1f, 1f, 1f, glowAlpha);
+        resonanceGlow.transform.localScale = Vector3.one * glowScale;
+        resonanceGlow.enabled = true;
+    }
+
+    public void ClearResonance()
+    {
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = baseColor;
+        }
+
+        if (resonanceGlow != null)
+        {
+            resonanceGlow.enabled = false;
+        }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -175,12 +223,32 @@ public sealed class Ball : MonoBehaviour
         }
     }
 
-    private IEnumerator PopRoutine()
+    private void EnsureResonanceGlow()
+    {
+        if (resonanceGlow != null)
+        {
+            return;
+        }
+
+        var glowObject = new GameObject("Resonance Glow");
+        glowObject.transform.SetParent(transform);
+        glowObject.transform.localPosition = Vector3.zero;
+        glowObject.transform.localRotation = Quaternion.identity;
+        glowObject.transform.localScale = Vector3.one * 1.16f;
+
+        resonanceGlow = glowObject.AddComponent<SpriteRenderer>();
+        resonanceGlow.sprite = CircleSpriteCache.Circle;
+        resonanceGlow.sortingOrder = spriteRenderer.sortingOrder - 1;
+        resonanceGlow.color = new Color(1f, 1f, 1f, 0f);
+        resonanceGlow.enabled = false;
+    }
+
+    private IEnumerator PopRoutine(float intensity)
     {
         var elapsed = 0f;
         const float duration = 0.16f;
         var startScale = targetScale * 0.5f;
-        var overshootScale = targetScale * 1.13f;
+        var overshootScale = targetScale * Mathf.Lerp(popBaseOvershoot, popMaxOvershoot, Mathf.Clamp01((intensity - 1f) * 5f));
 
         while (elapsed < duration)
         {

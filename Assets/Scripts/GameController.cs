@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -5,6 +6,13 @@ using UnityEngine.SceneManagement;
 public sealed class GameController : MonoBehaviour
 {
     private const string BestScoreKey = "MergePrototypeBestScore";
+    private const string BestLargestBallKey = "MergePrototypeBestLargestBall";
+    private const string DiscoveredLevelKeyPrefix = "MergePrototypeDiscoveredLevel_";
+
+    [SerializeField] private float chainWindowSeconds = 1.2f;
+    [SerializeField] private float savedMessageCooldownSeconds = 5f;
+    [SerializeField] private float savedCheckDelaySeconds = 0.25f;
+    [SerializeField] private float savedDangerThreshold = 0.35f;
     private static readonly int[] MergeScoreByLevel =
     {
         0,
@@ -27,12 +35,22 @@ public sealed class GameController : MonoBehaviour
     private Transform ballParent;
     private int nextBallId;
     private int highestMergedLevel = 1;
+    private int startingBestScore;
+    private bool newBestScoreThisRun;
+    private bool newBestLargestThisRun;
+    private float chainWindowEndsAt;
+    private int chainMergeCount;
+    private int lastAnnouncedChainCount;
+    private float dangerPressure;
+    private float lastSavedMessageTime = -999f;
 
     public int Score { get; private set; }
     public int BestScore { get; private set; }
+    public int BestLargestLevel { get; private set; }
     public bool IsGameOver { get; private set; }
     public IReadOnlyList<Ball> ActiveBalls => activeBalls;
     public int HighestMergedLevel => highestMergedLevel;
+    public int CurrentGoalLevel => Mathf.Max(3, highestMergedLevel + 1);
 
     public int GetNextBallId()
     {
@@ -47,6 +65,8 @@ public sealed class GameController : MonoBehaviour
         ballParent = new GameObject("Balls").transform;
 
         BestScore = PlayerPrefs.GetInt(BestScoreKey, 0);
+        BestLargestLevel = PlayerPrefs.GetInt(BestLargestBallKey, 1);
+        startingBestScore = BestScore;
         UpdateUi();
     }
 
@@ -68,6 +88,8 @@ public sealed class GameController : MonoBehaviour
             return;
         }
 
+        var hadDangerPressure = dangerPressure >= savedDangerThreshold;
+
         first.MarkMerging();
         second.MarkMerging();
 
@@ -78,18 +100,29 @@ public sealed class GameController : MonoBehaviour
         Destroy(second.gameObject);
 
         var mergedBall = SpawnBall(nextLevel, midpoint);
-        mergedBall.PlayPop();
+        mergedBall.PlayPop(GetMergePopIntensity(nextLevel));
 
         if (nextLevel > highestMergedLevel)
         {
             highestMergedLevel = nextLevel;
         }
 
+        if (nextLevel > BestLargestLevel)
+        {
+            BestLargestLevel = nextLevel;
+            newBestLargestThisRun = true;
+            PlayerPrefs.SetInt(BestLargestBallKey, BestLargestLevel);
+            PlayerPrefs.Save();
+        }
+
+        TryShowDiscovery(nextLevel);
+
         var scoreToAdd = GetScoreForLevel(nextLevel);
         Score += scoreToAdd;
         if (Score > BestScore)
         {
             BestScore = Score;
+            newBestScoreThisRun = true;
             PlayerPrefs.SetInt(BestScoreKey, BestScore);
             PlayerPrefs.Save();
         }
@@ -97,12 +130,30 @@ public sealed class GameController : MonoBehaviour
         effects.PlayMerge(midpoint, nextLevel, scoreToAdd);
         pressureFloor?.ApplyMergeRelief(nextLevel);
         Haptics.LightImpact();
+        RegisterMergeForChain();
+        if (hadDangerPressure)
+        {
+            StartCoroutine(SavedCheckRoutine());
+        }
+
         UpdateUi();
+    }
+
+    public void BeginDropWindow()
+    {
+        chainWindowEndsAt = Time.time + chainWindowSeconds;
+        chainMergeCount = 0;
+        lastAnnouncedChainCount = 0;
     }
 
     public void SetPressureFloor(PressureFloor floor)
     {
         pressureFloor = floor;
+    }
+
+    public void SetDangerPressure(float pressure)
+    {
+        dangerPressure = Mathf.Clamp01(pressure);
     }
 
     public int GetNextSpawnLevel()
@@ -118,7 +169,7 @@ public sealed class GameController : MonoBehaviour
         }
 
         IsGameOver = true;
-        gameUi.ShowGameOver(Score, BestScore);
+        gameUi.ShowGameOver(Score, BestScore, highestMergedLevel, BestLargestLevel, GetMotivationLine());
     }
 
     public void Restart()
@@ -159,5 +210,110 @@ public sealed class GameController : MonoBehaviour
     {
         gameUi.SetScore(Score);
         gameUi.SetBestScore(BestScore);
+        gameUi.SetLargestLevel(highestMergedLevel);
+        gameUi.SetGoalLevel(CurrentGoalLevel, IsLevelDiscovered(CurrentGoalLevel));
+    }
+
+    private void TryShowDiscovery(int level)
+    {
+        if (level < 2)
+        {
+            return;
+        }
+
+        var key = GetDiscoveredLevelKey(level);
+        if (PlayerPrefs.HasKey(key))
+        {
+            return;
+        }
+
+        PlayerPrefs.SetInt(key, 1);
+        PlayerPrefs.Save();
+        gameUi.ShowDiscoveryToast(level);
+    }
+
+    private string GetMotivationLine()
+    {
+        if (newBestScoreThisRun)
+        {
+            return "New Best Score!";
+        }
+
+        if (newBestLargestThisRun)
+        {
+            return $"New Largest Record: {CosmicBodyConfig.GetShortName(highestMergedLevel)}!";
+        }
+
+        if (startingBestScore > 0 && Score >= Mathf.RoundToInt(startingBestScore * 0.8f))
+        {
+            return "Almost! You were close.";
+        }
+
+        if (BestLargestLevel > 1 && highestMergedLevel == BestLargestLevel - 1)
+        {
+            return $"Almost reached {CosmicBodyConfig.GetShortName(BestLargestLevel)}.";
+        }
+
+        return "Try one more run.";
+    }
+
+    private static string GetDiscoveredLevelKey(int level)
+    {
+        return $"{DiscoveredLevelKeyPrefix}{level}";
+    }
+
+    private static bool IsLevelDiscovered(int level)
+    {
+        return level <= 1 || PlayerPrefs.HasKey(GetDiscoveredLevelKey(level));
+    }
+
+    private static float GetMergePopIntensity(int level)
+    {
+        if (level >= 8)
+        {
+            return 1.25f;
+        }
+
+        return level >= 6 ? 1.18f : 1f;
+    }
+
+    private void RegisterMergeForChain()
+    {
+        if (Time.time > chainWindowEndsAt)
+        {
+            return;
+        }
+
+        chainMergeCount++;
+        if (chainMergeCount >= 3 && lastAnnouncedChainCount < 3)
+        {
+            lastAnnouncedChainCount = 3;
+            gameUi.ShowMomentMessage("Great Chain!");
+            return;
+        }
+
+        if (chainMergeCount >= 2 && lastAnnouncedChainCount < 2)
+        {
+            lastAnnouncedChainCount = 2;
+            gameUi.ShowMomentMessage("Chain!");
+        }
+    }
+
+    private IEnumerator SavedCheckRoutine()
+    {
+        yield return new WaitForSeconds(savedCheckDelaySeconds);
+
+        if (IsGameOver || Time.time - lastSavedMessageTime < savedMessageCooldownSeconds)
+        {
+            yield break;
+        }
+
+        if (dangerPressure > 0.05f)
+        {
+            yield break;
+        }
+
+        lastSavedMessageTime = Time.time;
+        gameUi.ShowMomentMessage("Saved!");
     }
 }

@@ -3,6 +3,12 @@ using UnityEngine;
 
 public sealed class GameEffects : MonoBehaviour
 {
+    [SerializeField] private int highImpactLevel = 6;
+    [SerializeField] private int peakImpactLevel = 8;
+    [SerializeField] private float baseMergeFlashDuration = 0.22f;
+    [SerializeField] private float floatingScoreDuration = 0.75f;
+    [SerializeField] private float highLevelShakeDuration = 0.12f;
+
     private CameraShake cameraShake;
 
     public void Initialize(Camera mainCamera)
@@ -16,9 +22,12 @@ public sealed class GameEffects : MonoBehaviour
         StartCoroutine(FloatingScoreRoutine(position, score, level));
         PlayParticles(position, level);
 
-        if (level >= 6)
+        if (level >= highImpactLevel)
         {
-            cameraShake.Shake(0.12f, Mathf.Min(0.035f + level * 0.006f, 0.09f));
+            var shakeStrength = level >= peakImpactLevel
+                ? Mathf.Min(0.045f + level * 0.007f, 0.095f)
+                : Mathf.Min(0.03f + level * 0.005f, 0.065f);
+            cameraShake.Shake(highLevelShakeDuration, shakeStrength);
         }
     }
 
@@ -33,9 +42,9 @@ public sealed class GameEffects : MonoBehaviour
         renderer.sortingOrder = 30;
 
         var startScale = Vector3.one * Ball.GetDiameter(level);
-        var endScale = startScale * (level >= 6 ? 1.8f : 1.55f);
+        var endScale = startScale * GetFlashScale(level);
         var elapsed = 0f;
-        const float duration = 0.22f;
+        var duration = baseMergeFlashDuration;
 
         while (elapsed < duration)
         {
@@ -59,7 +68,7 @@ public sealed class GameEffects : MonoBehaviour
         var textMesh = scoreObject.AddComponent<TextMesh>();
         textMesh.text = $"+{score}";
         textMesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        textMesh.fontSize = level >= 6 ? 58 : 44;
+        textMesh.fontSize = GetFloatingScoreFontSize(level);
         textMesh.characterSize = 0.045f;
         textMesh.anchor = TextAnchor.MiddleCenter;
         textMesh.alignment = TextAlignment.Center;
@@ -70,9 +79,9 @@ public sealed class GameEffects : MonoBehaviour
 
         var startPosition = scoreObject.transform.position;
         var endPosition = startPosition + Vector3.up * 0.55f;
-        var startScale = Vector3.one * (level >= 6 ? 1.2f : 1f);
+        var startScale = Vector3.one * GetFloatingScoreScale(level);
         var elapsed = 0f;
-        const float duration = 0.75f;
+        var duration = floatingScoreDuration;
 
         while (elapsed < duration)
         {
@@ -96,14 +105,17 @@ public sealed class GameEffects : MonoBehaviour
         particleObject.transform.position = position;
 
         var particles = particleObject.AddComponent<ParticleSystem>();
+        particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
         var main = particles.main;
+        main.playOnAwake = false;
         main.duration = 0.35f;
         main.loop = false;
         main.startLifetime = 0.32f;
         main.startSpeed = 1.7f + level * 0.09f;
-        main.startSize = level >= 6 ? 0.11f : 0.08f;
+        main.startSize = level >= highImpactLevel ? 0.11f : 0.08f;
         main.startColor = CircleSpriteCache.GetBallColor(level);
-        main.maxParticles = level >= 6 ? 32 : 24;
+        main.maxParticles = level >= highImpactLevel ? 32 : 24;
 
         var emission = particles.emission;
         emission.enabled = false;
@@ -113,7 +125,37 @@ public sealed class GameEffects : MonoBehaviour
         shape.shapeType = ParticleSystemShapeType.Circle;
         shape.radius = 0.25f;
 
-        particles.Emit(Mathf.Clamp(8 + level * 2, 10, level >= 6 ? 32 : 24));
+        particles.Emit(Mathf.Clamp(8 + level * 2, 10, level >= highImpactLevel ? 32 : 24));
         Destroy(particleObject, 1f);
+    }
+
+    private float GetFlashScale(int level)
+    {
+        if (level >= peakImpactLevel)
+        {
+            return 1.95f;
+        }
+
+        return level >= highImpactLevel ? 1.78f : 1.55f;
+    }
+
+    private int GetFloatingScoreFontSize(int level)
+    {
+        if (level >= peakImpactLevel)
+        {
+            return 68;
+        }
+
+        return level >= highImpactLevel ? 58 : 44;
+    }
+
+    private float GetFloatingScoreScale(int level)
+    {
+        if (level >= peakImpactLevel)
+        {
+            return 1.36f;
+        }
+
+        return level >= highImpactLevel ? 1.2f : 1f;
     }
 }
