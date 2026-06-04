@@ -174,7 +174,7 @@ public sealed class GameUi : MonoBehaviour
 
     private static void EnsureEventSystem()
     {
-        if (FindObjectOfType<EventSystem>() != null)
+        if (FindAnyObjectByType<EventSystem>() != null)
         {
             return;
         }

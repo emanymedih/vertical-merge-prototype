@@ -5,8 +5,8 @@ public sealed class DangerLine : MonoBehaviour
 {
     private const float GameOverHoldSeconds = 2f;
 
-    private readonly Dictionary<int, float> dangerTimers = new Dictionary<int, float>();
-    private readonly List<int> idsToRemove = new List<int>();
+    private readonly Dictionary<Ball, float> dangerTimers = new Dictionary<Ball, float>();
+    private readonly List<Ball> ballsToRemove = new List<Ball>();
     private GameController controller;
     private float lineY;
 
@@ -30,10 +30,10 @@ public sealed class DangerLine : MonoBehaviour
             return;
         }
 
-        idsToRemove.Clear();
-        foreach (var id in dangerTimers.Keys)
+        ballsToRemove.Clear();
+        foreach (var trackedBall in dangerTimers.Keys)
         {
-            idsToRemove.Add(id);
+            ballsToRemove.Add(trackedBall);
         }
 
         foreach (var ball in controller.ActiveBalls)
@@ -43,13 +43,12 @@ public sealed class DangerLine : MonoBehaviour
                 continue;
             }
 
-            var id = ball.GetInstanceID();
             if (ball.IsEligibleForDanger(lineY))
             {
-                dangerTimers[id] = dangerTimers.TryGetValue(id, out var timer) ? timer + Time.deltaTime : Time.deltaTime;
-                idsToRemove.Remove(id);
+                dangerTimers[ball] = dangerTimers.TryGetValue(ball, out var timer) ? timer + Time.deltaTime : Time.deltaTime;
+                ballsToRemove.Remove(ball);
 
-                if (dangerTimers[id] >= GameOverHoldSeconds)
+                if (dangerTimers[ball] >= GameOverHoldSeconds)
                 {
                     controller.TriggerGameOver();
                     return;
@@ -57,9 +56,9 @@ public sealed class DangerLine : MonoBehaviour
             }
         }
 
-        for (var i = 0; i < idsToRemove.Count; i++)
+        for (var i = 0; i < ballsToRemove.Count; i++)
         {
-            dangerTimers.Remove(idsToRemove[i]);
+            dangerTimers.Remove(ballsToRemove[i]);
         }
     }
 }

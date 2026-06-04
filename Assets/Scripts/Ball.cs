@@ -15,6 +15,7 @@ public sealed class Ball : MonoBehaviour
     private bool isMerging;
     private Vector3 targetScale;
 
+    public int MergeId { get; private set; }
     public int Level { get; private set; }
     public float SpawnedAt { get; private set; }
     public float Radius => transform.lossyScale.x * 0.5f;
@@ -24,6 +25,7 @@ public sealed class Ball : MonoBehaviour
     {
         Level = level;
         controller = gameController;
+        MergeId = controller.GetNextBallId();
         SpawnedAt = Time.time;
 
         body = GetComponent<Rigidbody2D>();
@@ -32,8 +34,8 @@ public sealed class Ball : MonoBehaviour
 
         body.gravityScale = 1f;
         body.mass = Mathf.Lerp(0.8f, 2.4f, Mathf.Clamp01(level / 8f));
-        body.drag = 0.05f;
-        body.angularDrag = 0.15f;
+        body.linearDamping = 0.05f;
+        body.angularDamping = 0.15f;
         body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         body.interpolation = RigidbodyInterpolation2D.Interpolate;
 
@@ -67,7 +69,7 @@ public sealed class Ball : MonoBehaviour
             return false;
         }
 
-        var settled = body.velocity.sqrMagnitude <= SettledVelocity * SettledVelocity
+        var settled = body.linearVelocity.sqrMagnitude <= SettledVelocity * SettledVelocity
             && Mathf.Abs(body.angularVelocity) <= SettledAngularVelocity;
 
         return settled && transform.position.y + Radius >= dangerLineY;
@@ -101,7 +103,7 @@ public sealed class Ball : MonoBehaviour
             return;
         }
 
-        if (GetInstanceID() > other.GetInstanceID())
+        if (MergeId > other.MergeId)
         {
             return;
         }

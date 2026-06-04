@@ -10,11 +10,18 @@ public sealed class GameController : MonoBehaviour
     private GameUi gameUi;
     private GameEffects effects;
     private Transform ballParent;
+    private int nextBallId;
 
     public int Score { get; private set; }
     public int BestScore { get; private set; }
     public bool IsGameOver { get; private set; }
     public IReadOnlyList<Ball> ActiveBalls => activeBalls;
+
+    public int GetNextBallId()
+    {
+        nextBallId++;
+        return nextBallId;
+    }
 
     public void Initialize(GameUi ui, GameEffects gameEffects)
     {
