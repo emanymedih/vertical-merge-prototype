@@ -3,6 +3,7 @@ using UnityEngine;
 public static class CosmicArenaVisuals
 {
     private const int StarCount = 86;
+    private const string WallpaperResourceName = "GravitationalChamberWallpaper";
 
     public static void Build(Camera cameraToUse, ContainerBounds bounds, Transform parent)
     {
@@ -17,6 +18,12 @@ public static class CosmicArenaVisuals
     {
         var halfHeight = cameraToUse.orthographicSize;
         var visibleWidth = halfHeight * 2f * cameraToUse.aspect;
+
+        if (CreateWallpaper(parent, cameraToUse, visibleWidth, halfHeight * 2f))
+        {
+            CreatePanel(parent, "Wallpaper Depth Fade", Vector2.zero, new Vector2(visibleWidth + 0.8f, halfHeight * 2f + 0.8f), new Color(0f, 0.01f, 0.025f, 0.12f), -34);
+            return;
+        }
 
         CreatePanel(parent, "Deep Space Backdrop", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(0.01f, 0.014f, 0.032f), -40);
         CreatePanel(parent, "Upper Nebula Haze", new Vector2(0f, halfHeight * 0.38f), new Vector2(visibleWidth + 1.8f, halfHeight * 0.96f), new Color(0.055f, 0.07f, 0.14f, 0.46f), -39);
@@ -35,6 +42,36 @@ public static class CosmicArenaVisuals
         }
 
         Random.state = previousRandomState;
+    }
+
+    private static bool CreateWallpaper(Transform parent, Camera cameraToUse, float visibleWidth, float visibleHeight)
+    {
+        var sprite = Resources.Load<Sprite>(WallpaperResourceName);
+        if (sprite == null)
+        {
+            var sprites = Resources.LoadAll<Sprite>(WallpaperResourceName);
+            if (sprites == null || sprites.Length == 0)
+            {
+                return false;
+            }
+
+            sprite = sprites[0];
+        }
+
+        var wallpaper = new GameObject("Gravitational Chamber Wallpaper");
+        wallpaper.transform.SetParent(parent);
+        wallpaper.transform.position = new Vector3(cameraToUse.transform.position.x, cameraToUse.transform.position.y, 0f);
+
+        var renderer = wallpaper.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.color = Color.white;
+        renderer.sortingOrder = -45;
+
+        var spriteWidth = sprite.bounds.size.x;
+        var spriteHeight = sprite.bounds.size.y;
+        var coverScale = Mathf.Max(visibleWidth / spriteWidth, visibleHeight / spriteHeight);
+        wallpaper.transform.localScale = Vector3.one * coverScale;
+        return true;
     }
 
     private static void CreateEnergyBoundaries(Transform parent, ContainerBounds bounds)
