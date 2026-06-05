@@ -145,17 +145,17 @@ public static class BallConfig
 
     public static int PickSpawnLevel(int highestMergedLevel)
     {
-        if (highestMergedLevel >= 6)
+        if (highestMergedLevel >= 5)
         {
-            return PickWeightedLevel(new[] { 1, 2, 3, 4 }, new[] { 50, 30, 15, 5 });
+            return PickWeightedLevel(new[] { 1, 2, 3, 4 }, new[] { 45, 30, 18, 7 });
         }
 
-        if (highestMergedLevel >= 4)
+        if (highestMergedLevel >= 3)
         {
-            return PickWeightedLevel(new[] { 1, 2, 3 }, new[] { 60, 30, 10 });
+            return PickWeightedLevel(new[] { 1, 2, 3 }, new[] { 50, 35, 15 });
         }
 
-        return PickWeightedLevel(new[] { 1, 2 }, new[] { 75, 25 });
+        return PickWeightedLevel(new[] { 1, 2 }, new[] { 60, 40 });
     }
 
     private static float GetValue(float[] values, int level)

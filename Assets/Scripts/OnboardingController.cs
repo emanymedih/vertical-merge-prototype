@@ -121,6 +121,7 @@ public sealed class OnboardingController : MonoBehaviour
         {
             ResetProgress();
             OpeningDemoController.ResetProgress();
+            GameController.ResetFirstSessionPacingProgress();
             completed = false;
             dropCount = 0;
             isAiming = false;

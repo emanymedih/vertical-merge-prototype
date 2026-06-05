@@ -32,7 +32,7 @@ public sealed class GameBootstrap : MonoBehaviour
 
         var pressureFloorObject = new GameObject("Pressure Floor");
         var pressureFloor = pressureFloorObject.AddComponent<PressureFloor>();
-        pressureFloor.Initialize(controller, bounds);
+        pressureFloor.Initialize(controller, bounds, controller.IsFirstSessionPacingActive);
         controller.SetPressureFloor(pressureFloor);
 
         var spawnerObject = new GameObject("Ball Spawner");

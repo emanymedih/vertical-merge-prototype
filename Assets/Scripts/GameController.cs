@@ -8,6 +8,7 @@ public sealed class GameController : MonoBehaviour
     private const string BestScoreKey = "MergePrototypeBestScore";
     private const string BestLargestBallKey = "MergePrototypeBestLargestBall";
     private const string DiscoveredLevelKeyPrefix = "MergePrototypeDiscoveredLevel_";
+    private const string FirstSessionPacingCompletedKey = "MergePrototypeFirstSessionPacingCompleted";
 
     [SerializeField] private float chainWindowSeconds = 1.2f;
     [SerializeField] private float savedMessageCooldownSeconds = 5f;
@@ -44,6 +45,8 @@ public sealed class GameController : MonoBehaviour
     private float dangerPressure;
     private float lastSavedMessageTime = -999f;
     private float runStartedAt;
+    private float firstMergeAt = -1f;
+    private float firstPlanetAt = -1f;
     private int runMergeCount;
 
     public int Score { get; private set; }
@@ -52,6 +55,7 @@ public sealed class GameController : MonoBehaviour
     public bool IsGameOver { get; private set; }
     public bool IsInputLocked { get; private set; }
     public bool IsOpeningDemoActive { get; private set; }
+    public bool IsFirstSessionPacingActive { get; private set; }
     public IReadOnlyList<Ball> ActiveBalls => activeBalls;
     public int HighestMergedLevel => highestMergedLevel;
     public int CurrentGoalLevel => Mathf.Max(3, highestMergedLevel + 1);
@@ -62,6 +66,12 @@ public sealed class GameController : MonoBehaviour
         return nextBallId;
     }
 
+    public static void ResetFirstSessionPacingProgress()
+    {
+        PlayerPrefs.DeleteKey(FirstSessionPacingCompletedKey);
+        PlayerPrefs.Save();
+    }
+
     public void Initialize(GameUi ui, GameEffects gameEffects)
     {
         gameUi = ui;
@@ -70,6 +80,7 @@ public sealed class GameController : MonoBehaviour
 
         BestScore = PlayerPrefs.GetInt(BestScoreKey, 0);
         BestLargestLevel = PlayerPrefs.GetInt(BestLargestBallKey, 1);
+        IsFirstSessionPacingActive = !PlayerPrefs.HasKey(FirstSessionPacingCompletedKey);
         startingBestScore = BestScore;
         runStartedAt = Time.time;
         UpdateUi();
@@ -98,6 +109,10 @@ public sealed class GameController : MonoBehaviour
         if (!suppressRunProgress)
         {
             runMergeCount++;
+            if (firstMergeAt < 0f)
+            {
+                firstMergeAt = Time.time - runStartedAt;
+            }
         }
 
         first.MarkMerging();
@@ -115,6 +130,10 @@ public sealed class GameController : MonoBehaviour
         if (nextLevel > highestMergedLevel)
         {
             highestMergedLevel = nextLevel;
+            if (!suppressRunProgress && nextLevel >= 3 && firstPlanetAt < 0f)
+            {
+                firstPlanetAt = Time.time - runStartedAt;
+            }
         }
 
         var newLargestRecordThisMerge = nextLevel > BestLargestLevel;
@@ -216,6 +235,7 @@ public sealed class GameController : MonoBehaviour
 
         IsGameOver = true;
         LogRunSummary();
+        CompleteFirstSessionPacing();
         SoundManager.Play(SoundEvent.GameOver);
         gameUi.ShowGameOver(Score, BestScore, highestMergedLevel, BestLargestLevel, newBestScoreThisRun, newBestLargestThisRun, GetMotivationLine());
     }
@@ -332,7 +352,10 @@ public sealed class GameController : MonoBehaviour
         Debug.Log(
             $"Run complete: duration={FormatDuration(runDuration)}, " +
             $"score={Score}, largest={CosmicBodyConfig.GetShortName(highestMergedLevel)}, " +
-            $"mergeCount={runMergeCount}");
+            $"mergeCount={runMergeCount}, " +
+            $"firstMerge={FormatTiming(firstMergeAt)}, " +
+            $"firstPlanet={FormatTiming(firstPlanetAt)}, " +
+            $"firstSessionPacing={IsFirstSessionPacingActive}");
     }
 
     private static string FormatDuration(float seconds)
@@ -341,6 +364,22 @@ public sealed class GameController : MonoBehaviour
         var minutes = totalSeconds / 60;
         var remainingSeconds = totalSeconds % 60;
         return $"{minutes:00}:{remainingSeconds:00}";
+    }
+
+    private static string FormatTiming(float seconds)
+    {
+        return seconds < 0f ? "none" : FormatDuration(seconds);
+    }
+
+    private void CompleteFirstSessionPacing()
+    {
+        if (!IsFirstSessionPacingActive)
+        {
+            return;
+        }
+
+        PlayerPrefs.SetInt(FirstSessionPacingCompletedKey, 1);
+        PlayerPrefs.Save();
     }
 
     private void RegisterMergeForChain()

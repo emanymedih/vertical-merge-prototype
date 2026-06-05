@@ -3,10 +3,13 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D), typeof(SpriteRenderer))]
 public sealed class PressureFloor : MonoBehaviour
 {
-    private const float InitialDelaySeconds = 8f;
-    private const float BaseRiseSpeed = 0.038f;
+    private const float FirstSessionInitialDelaySeconds = 5f;
+    private const float FirstSessionBaseRiseSpeed = 0.048f;
+    private const float FirstSessionMaxRiseSpeed = 0.078f;
+    private const float StandardInitialDelaySeconds = 7f;
+    private const float StandardBaseRiseSpeed = 0.042f;
+    private const float StandardMaxRiseSpeed = 0.07f;
     private const float RiseAcceleration = 0.00004f;
-    private const float MaxRiseSpeed = 0.065f;
     private const float SurfaceThickness = 0.16f;
 
     private GameController controller;
@@ -22,10 +25,17 @@ public sealed class PressureFloor : MonoBehaviour
     private float dangerY;
     private float width;
     private float elapsed;
+    private float initialDelaySeconds;
+    private float baseRiseSpeed;
+    private float maxRiseSpeed;
 
-    public void Initialize(GameController gameController, ContainerBounds bounds)
+    public void Initialize(GameController gameController, ContainerBounds bounds, bool firstSessionPacingActive)
     {
         controller = gameController;
+        initialDelaySeconds = firstSessionPacingActive ? FirstSessionInitialDelaySeconds : StandardInitialDelaySeconds;
+        baseRiseSpeed = firstSessionPacingActive ? FirstSessionBaseRiseSpeed : StandardBaseRiseSpeed;
+        maxRiseSpeed = firstSessionPacingActive ? FirstSessionMaxRiseSpeed : StandardMaxRiseSpeed;
+
         bottomY = bounds.Bottom - 0.35f;
         startY = bottomY - 0.55f;
         currentY = startY;
@@ -83,13 +93,13 @@ public sealed class PressureFloor : MonoBehaviour
         }
 
         elapsed += Time.fixedDeltaTime;
-        if (elapsed < InitialDelaySeconds)
+        if (elapsed < initialDelaySeconds)
         {
             return;
         }
 
-        var activeSeconds = elapsed - InitialDelaySeconds;
-        var riseSpeed = Mathf.Min(BaseRiseSpeed + activeSeconds * RiseAcceleration, MaxRiseSpeed);
+        var activeSeconds = elapsed - initialDelaySeconds;
+        var riseSpeed = Mathf.Min(baseRiseSpeed + activeSeconds * RiseAcceleration, maxRiseSpeed);
         currentY += riseSpeed * Time.fixedDeltaTime;
 
         MoveWithPhysics();
