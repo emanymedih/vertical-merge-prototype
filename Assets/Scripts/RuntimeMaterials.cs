@@ -34,6 +34,7 @@ public static class RuntimeMaterials
         }
 
         var material = new Material(shader);
+        color.a = 1f;
         material.SetColor("_Tint", color);
         material.SetFloat("_Intensity", intensity);
         material.SetFloat("_PulseSpeed", pulseSpeed);
@@ -49,6 +50,7 @@ public static class RuntimeMaterials
         }
 
         var material = new Material(shader);
+        color.a = 1f;
         material.SetColor("_Tint", color);
         material.SetFloat("_Intensity", intensity);
         material.SetFloat("_PulseSpeed", pulseSpeed);

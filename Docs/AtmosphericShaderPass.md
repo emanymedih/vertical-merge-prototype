@@ -10,7 +10,7 @@ Make the first glance feel more atmospheric without adding external assets, URP,
 - Applied nebula overlay to the arena background, including the wallpaper-backed chamber.
 - Applied energy/glow materials to chamber side boundaries and gravity platform highlights.
 - Applied soft glow materials to cosmic body rims, glows, and rings.
-- Added a grade-scaled aura layer: low bodies get subtle glow, while high-grade bodies gain stronger atmospheric glow without changing physics size.
+- Added a grade-scaled aura layer: L1-L2 stay subtle, L3+ get visible pulsing glow, and high-grade bodies gain stronger atmospheric glow without changing physics size.
 - Applied the energy beam material to anomaly target beams.
 
 ## Constraints
