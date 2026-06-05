@@ -19,7 +19,7 @@ Add controlled mid-run events that make a six-minute session feel less flat: rar
 - Critical merge score uses the actually created level.
 - Critical merge silently marks the skipped intermediate level as discovered, so goal progression stays readable.
 - Comet is a rescue tool, not a reward economy source.
-- Anomaly `Evaded!` gives a one-shot bonus equal to 50% of the next-level score for the rescued target.
+- Anomaly `Evaded!` gives a one-shot x2 rescue bonus based on 50% of the next-level score for the rescued target, shown as `Evaded! x2`.
 - Sound remains hook-only in this pass. No audio assets or Unity Audio module dependency are added.
 - No DOTween, Post Processing package, external assets, SDKs, ads, revive, shop, leaderboard, or meta systems.
 

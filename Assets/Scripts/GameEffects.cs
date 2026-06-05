@@ -55,10 +55,11 @@ public sealed class GameEffects : MonoBehaviour
         cameraShake?.Shake(0.1f, 0.055f);
     }
 
-    public void PlayAnomalyEvaded(Vector2 position, int bonusScore)
+    public void PlayAnomalyEvaded(Vector2 position, int bonusScore, int multiplier)
     {
         StartCoroutine(SpecialPulseRoutine(position, 4, new Color(0.76f, 1f, 0.62f), new Color(1f, 0.84f, 0.28f), 0.24f, 2.25f));
-        StartCoroutine(FloatingMessageRoutine(position + Vector2.up * 0.34f, $"Evaded! +{bonusScore}", new Color(1f, 0.9f, 0.42f), 0.84f));
+        StartCoroutine(FloatingMessageRoutine(position + Vector2.up * 0.34f, $"Evaded! x{multiplier} +{bonusScore}", new Color(1f, 0.9f, 0.42f), 0.92f));
+        PlayEvadeSparks(position);
         cameraShake?.Shake(0.08f, 0.035f);
     }
 
@@ -267,6 +268,40 @@ public sealed class GameEffects : MonoBehaviour
 
         particles.Emit(Mathf.Clamp(feel.ParticlesCount, 10, Mathf.Max(feel.ParticlesCount, 12)));
         StartCoroutine(ReturnParticlesRoutine(particles, Mathf.Max(main.startLifetime.constantMax, 0.6f) + 0.2f));
+    }
+
+    private void PlayEvadeSparks(Vector2 position)
+    {
+        var particles = GetParticles();
+        particles.gameObject.transform.position = position;
+        particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        var main = particles.main;
+        main.playOnAwake = false;
+        main.duration = 0.26f;
+        main.loop = false;
+        main.startLifetime = 0.34f;
+        main.startSpeed = 2.65f;
+        main.startSize = 0.095f;
+        main.startColor = new Color(1f, 0.88f, 0.34f, 1f);
+        main.maxParticles = 32;
+
+        var emission = particles.emission;
+        emission.enabled = false;
+
+        var velocityLimit = particles.limitVelocityOverLifetime;
+        velocityLimit.enabled = true;
+        velocityLimit.limit = 3.2f;
+        velocityLimit.dampen = 0.68f;
+        velocityLimit.drag = 1.7f;
+
+        var shape = particles.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 0.18f;
+
+        particles.Emit(28);
+        StartCoroutine(ReturnParticlesRoutine(particles, 0.68f));
     }
 
     private float GetFlashScale(int level)

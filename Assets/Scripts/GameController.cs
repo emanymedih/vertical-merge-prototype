@@ -15,6 +15,7 @@ public sealed class GameController : MonoBehaviour
     private const float CometCooldownSeconds = 60f;
     private const float CometSpawnChance = 0.1f;
     private const float CometMinRunSeconds = 45f;
+    private const int AnomalyEvadeScoreMultiplier = 2;
 
     [SerializeField] private float chainWindowSeconds = 1.2f;
     [SerializeField] private float savedMessageCooldownSeconds = 5f;
@@ -355,7 +356,8 @@ public sealed class GameController : MonoBehaviour
         }
 
         var bonusLevel = Mathf.Min(targetLevel + 1, BallConfig.MaxConfiguredLevel);
-        var bonusScore = Mathf.Max(10, Mathf.RoundToInt(GetScoreForLevel(bonusLevel) * 0.5f));
+        var baseBonusScore = Mathf.Max(10, Mathf.RoundToInt(GetScoreForLevel(bonusLevel) * 0.5f));
+        var bonusScore = baseBonusScore * AnomalyEvadeScoreMultiplier;
         Score += bonusScore;
         if (Score > BestScore)
         {
@@ -365,7 +367,7 @@ public sealed class GameController : MonoBehaviour
             PlayerPrefs.Save();
         }
 
-        effects.PlayAnomalyEvaded(position, bonusScore);
+        effects.PlayAnomalyEvaded(position, bonusScore, AnomalyEvadeScoreMultiplier);
         gameUi.ShowMomentMessage("Evaded!");
         SoundManager.Play(SoundEvent.AnomalyEvaded);
         Haptics.SuccessPattern();
