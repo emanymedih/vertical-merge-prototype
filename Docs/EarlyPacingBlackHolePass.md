@@ -20,6 +20,8 @@ planet stages faster and feel that creating a Black Hole changes the physical fi
 - L3/L4 visuals now have stronger procedural planet details.
 - L9 `Black Hole` now has a local gravity field.
 - L9 visuals have a stronger accretion/aura treatment.
+- Follow-up release pass adds a timed Event Horizon absorption cycle; see
+  `Docs/BlackHoleEventHorizonPass.md`.
 - Editor QA shortcut: `Ctrl+Shift+B` spawns a Black Hole in Play Mode for gravity testing.
 
 ## Black Hole Gravity

@@ -10,7 +10,9 @@ public enum SoundEvent
     DangerWarning,
     GameOver,
     NewRecord,
-    ButtonClick
+    ButtonClick,
+    BlackHoleWarning,
+    BlackHoleAbsorb
 }
 
 public sealed class SoundManager : MonoBehaviour

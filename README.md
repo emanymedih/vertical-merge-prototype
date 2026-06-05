@@ -12,6 +12,7 @@ Minimal Unity 2D iOS prototype for a portrait physics merge game.
 - Classic arcade readability and manual run-test pass documented in `Docs/ClassicArcadeCorePass.md`
 - Result screen and HUD readability polish documented in `Docs/ReadabilityResultPolishPass.md`
 - Early pacing and Black Hole gravity pass documented in `Docs/EarlyPacingBlackHolePass.md`
+- Black Hole event horizon release pass documented in `Docs/BlackHoleEventHorizonPass.md`
 - Drag horizontally near the top and release to drop
 - Same-level balls merge into the next level
 - Score and best score

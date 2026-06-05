@@ -181,6 +181,18 @@ public sealed class Ball : MonoBehaviour
         body.AddForce(force, ForceMode2D.Force);
     }
 
+    public bool TryStartBlackHoleAbsorption(Vector2 blackHoleCenter, float duration)
+    {
+        if (isMerging || body == null)
+        {
+            return false;
+        }
+
+        StopAllCoroutines();
+        StartCoroutine(BlackHoleAbsorptionRoutine(blackHoleCenter, duration));
+        return true;
+    }
+
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (isMerging || controller == null || controller.IsGameOver)
@@ -290,5 +302,48 @@ public sealed class Ball : MonoBehaviour
         }
 
         transform.localScale = targetScale;
+    }
+
+    private IEnumerator BlackHoleAbsorptionRoutine(Vector2 blackHoleCenter, float duration)
+    {
+        isMerging = true;
+        ClearResonance();
+
+        if (circleCollider != null)
+        {
+            circleCollider.enabled = false;
+        }
+
+        if (body != null)
+        {
+            body.linearVelocity = Vector2.zero;
+            body.angularVelocity = 0f;
+            body.simulated = false;
+        }
+
+        var startPosition = (Vector2)transform.position;
+        var startScale = transform.localScale;
+        var sideVector = Vector2.Perpendicular(blackHoleCenter - startPosition).normalized;
+        if (sideVector.sqrMagnitude <= 0.001f)
+        {
+            sideVector = Vector2.right;
+        }
+
+        var elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / duration);
+            var eased = Mathf.SmoothStep(0f, 1f, t);
+            var spiral = Mathf.Sin(t * Mathf.PI * 2.4f) * (1f - eased) * Radius * 0.42f;
+            var position = Vector2.Lerp(startPosition, blackHoleCenter, eased) + sideVector * spiral;
+
+            transform.position = new Vector3(position.x, position.y, transform.position.z);
+            transform.localScale = Vector3.Lerp(startScale, Vector3.one * 0.04f, eased);
+            transform.Rotate(0f, 0f, Mathf.Lerp(220f, 780f, t) * Time.deltaTime);
+            yield return null;
+        }
+
+        Destroy(gameObject);
     }
 }
