@@ -5,6 +5,7 @@ Minimal Unity 2D iOS prototype for a portrait physics merge game.
 ## Current Scope
 
 - One scene: `Assets/Scenes/GameScene.unity`
+- Product principles and core-loop guardrails documented in `Docs/ProductPrinciples.md`
 - Runtime-generated circular balls and container visuals
 - Planets / Cosmic Bodies theme naming documented in `Docs/ThemePlanets.md`
 - Procedural cosmic body and arena visual direction documented in `Docs/VisualIdentityPlan.md`
