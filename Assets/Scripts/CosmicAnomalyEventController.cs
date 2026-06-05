@@ -289,7 +289,7 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
 
     private bool CanAbsorb(Ball ball)
     {
-        if (ball == null || ball.IsMerging || ball.Level > MaxAbsorbLevel)
+        if (ball == null || ball.IsMerging || ball.IsPreMerging || ball.Level > MaxAbsorbLevel)
         {
             return false;
         }

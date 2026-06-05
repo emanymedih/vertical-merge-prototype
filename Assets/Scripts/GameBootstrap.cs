@@ -39,6 +39,10 @@ public sealed class GameBootstrap : MonoBehaviour
         var anomalyController = anomalyObject.AddComponent<CosmicAnomalyEventController>();
         anomalyController.Initialize(controller, bounds);
 
+        var magneticTensionObject = new GameObject("Magnetic Tension Controller");
+        var magneticTension = magneticTensionObject.AddComponent<MagneticTensionController>();
+        magneticTension.Initialize(controller);
+
         OpeningDemoController.Build(controller, bounds);
 
         var spawnerObject = new GameObject("Ball Spawner");

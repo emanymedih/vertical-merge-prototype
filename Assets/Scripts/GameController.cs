@@ -9,6 +9,7 @@ public sealed class GameController : MonoBehaviour
     private const string BestLargestBallKey = "MergePrototypeBestLargestBall";
     private const string DiscoveredLevelKeyPrefix = "MergePrototypeDiscoveredLevel_";
     private const string FirstSessionPacingCompletedKey = "MergePrototypeFirstSessionPacingCompleted";
+    private const float PreMergeDelaySeconds = 0.16f;
 
     [SerializeField] private float chainWindowSeconds = 1.2f;
     [SerializeField] private float savedMessageCooldownSeconds = 5f;
@@ -30,6 +31,7 @@ public sealed class GameController : MonoBehaviour
     };
 
     private readonly List<Ball> activeBalls = new List<Ball>();
+    private readonly HashSet<int> preMergePairKeys = new HashSet<int>();
     private GameUi gameUi;
     private GameEffects effects;
     private PressureFloor pressureFloor;
@@ -98,9 +100,31 @@ public sealed class GameController : MonoBehaviour
         return ball;
     }
 
+    public void TryStartPreMerge(Ball first, Ball second, Vector2 contactPoint)
+    {
+        if (IsGameOver || first == null || second == null || first == second)
+        {
+            return;
+        }
+
+        if (first.IsMerging || second.IsMerging || first.IsPreMerging || second.IsPreMerging || first.Level != second.Level)
+        {
+            return;
+        }
+
+        var pairKey = GetPreMergePairKey(first, second);
+        if (preMergePairKeys.Contains(pairKey))
+        {
+            return;
+        }
+
+        preMergePairKeys.Add(pairKey);
+        StartCoroutine(PreMergeRoutine(first, second, contactPoint, pairKey));
+    }
+
     public void MergeBalls(Ball first, Ball second)
     {
-        if (IsGameOver || first == null || second == null || first.IsMerging || second.IsMerging)
+        if (IsGameOver || first == null || second == null || first.IsMerging || second.IsMerging || first.Level != second.Level)
         {
             return;
         }
@@ -161,10 +185,12 @@ public sealed class GameController : MonoBehaviour
             }
         }
 
+        var feel = CosmicBodyFeelDatabase.Get(nextLevel);
         effects.PlayMerge(midpoint, nextLevel, suppressRunProgress ? 0 : scoreToAdd);
         SoundManager.Play(nextLevel >= 6 ? SoundEvent.HighMergeBoom : SoundEvent.MergePop);
+        SoundManager.PlayMerge(feel);
         pressureFloor?.ApplyMergeRelief(nextLevel);
-        Haptics.LightImpact();
+        Haptics.Play(feel.HapticType);
         if (!suppressRunProgress)
         {
             OnboardingController.Instance?.RegisterMerge();
@@ -297,6 +323,79 @@ public sealed class GameController : MonoBehaviour
         }
 
         return score;
+    }
+
+    private IEnumerator PreMergeRoutine(Ball first, Ball second, Vector2 contactPoint, int pairKey)
+    {
+        FixedJoint2D joint = null;
+        var feel = CosmicBodyFeelDatabase.Get(first.Level + 1);
+
+        try
+        {
+            if (first == null || second == null || first.Body == null || second.Body == null)
+            {
+                yield break;
+            }
+
+            joint = first.gameObject.AddComponent<FixedJoint2D>();
+            joint.connectedBody = second.Body;
+            joint.enableCollision = false;
+            joint.dampingRatio = 1f;
+            joint.frequency = 9f;
+
+            first.BeginPreMergeCharge(contactPoint, feel);
+            second.BeginPreMergeCharge(contactPoint, feel);
+
+            yield return new WaitForSeconds(PreMergeDelaySeconds);
+
+            if (IsGameOver || first == null || second == null || first.IsMerging || second.IsMerging)
+            {
+                yield break;
+            }
+
+            if (first.Level != second.Level)
+            {
+                yield break;
+            }
+
+            first.EndPreMergeCharge();
+            second.EndPreMergeCharge();
+            if (joint != null)
+            {
+                Destroy(joint);
+                joint = null;
+            }
+
+            MergeBalls(first, second);
+        }
+        finally
+        {
+            preMergePairKeys.Remove(pairKey);
+            if (first != null && !first.IsMerging)
+            {
+                first.EndPreMergeCharge();
+            }
+
+            if (second != null && !second.IsMerging)
+            {
+                second.EndPreMergeCharge();
+            }
+
+            if (joint != null)
+            {
+                Destroy(joint);
+            }
+        }
+    }
+
+    private static int GetPreMergePairKey(Ball first, Ball second)
+    {
+        var low = Mathf.Min(first.MergeId, second.MergeId);
+        var high = Mathf.Max(first.MergeId, second.MergeId);
+        unchecked
+        {
+            return (low * 397) ^ high;
+        }
     }
 
     private void UpdateUi()

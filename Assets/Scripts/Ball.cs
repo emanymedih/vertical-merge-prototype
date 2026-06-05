@@ -28,7 +28,10 @@ public sealed class Ball : MonoBehaviour
     private SpriteRenderer popGlow;
     private Color baseColor;
     private bool isMerging;
+    private bool isPreMerging;
+    private bool hasMagneticTension;
     private Vector3 targetScale;
+    private Coroutine preMergeChargeRoutine;
 
     public int MergeId { get; private set; }
     public int Level { get; private set; }
@@ -36,6 +39,8 @@ public sealed class Ball : MonoBehaviour
     public float Radius => transform.lossyScale.x * 0.5f;
     public float Mass => body != null ? body.mass : BallConfig.GetMass(Level);
     public bool IsMerging => isMerging;
+    public bool IsPreMerging => isPreMerging;
+    public Rigidbody2D Body => body;
 
     public void Initialize(int level, GameController gameController)
     {
@@ -84,7 +89,7 @@ public sealed class Ball : MonoBehaviour
 
     public bool IsReadyForNextDrop(float spawnY)
     {
-        if (isMerging || body == null)
+        if (isMerging || isPreMerging || body == null)
         {
             return true;
         }
@@ -102,7 +107,7 @@ public sealed class Ball : MonoBehaviour
 
     public bool IsEligibleForDanger(float dangerLineY)
     {
-        if (isMerging || Time.time - SpawnedAt < SpawnGraceSeconds)
+        if (isMerging || isPreMerging || Time.time - SpawnedAt < SpawnGraceSeconds)
         {
             return false;
         }
@@ -121,6 +126,7 @@ public sealed class Ball : MonoBehaviour
     public void MarkMerging()
     {
         isMerging = true;
+        EndPreMergeCharge();
         if (circleCollider != null)
         {
             circleCollider.enabled = false;
@@ -142,7 +148,7 @@ public sealed class Ball : MonoBehaviour
     public void PlayMergeBirth(int level)
     {
         StopAllCoroutines();
-        StartCoroutine(MergeBirthRoutine(level));
+        StartCoroutine(MergeBirthRoutine(level, CosmicBodyFeelDatabase.Get(level)));
     }
 
     public void SetResonance(float strength, bool emphasized)
@@ -173,6 +179,7 @@ public sealed class Ball : MonoBehaviour
 
     public void ClearResonance()
     {
+        hasMagneticTension = false;
         if (spriteRenderer != null)
         {
             spriteRenderer.color = baseColor;
@@ -186,7 +193,7 @@ public sealed class Ball : MonoBehaviour
 
     public void TryApplyExternalForce(Vector2 force)
     {
-        if (isMerging || body == null)
+        if (isMerging || isPreMerging || body == null)
         {
             return;
         }
@@ -196,7 +203,7 @@ public sealed class Ball : MonoBehaviour
 
     public bool TryStartBlackHoleAbsorption(Vector2 blackHoleCenter, float duration)
     {
-        if (isMerging || body == null)
+        if (isMerging || isPreMerging || body == null)
         {
             return false;
         }
@@ -206,15 +213,74 @@ public sealed class Ball : MonoBehaviour
         return true;
     }
 
+    public void BeginPreMergeCharge(Vector2 contactPoint, CosmicBodyFeel feel)
+    {
+        if (isMerging || body == null)
+        {
+            return;
+        }
+
+        if (preMergeChargeRoutine != null)
+        {
+            StopCoroutine(preMergeChargeRoutine);
+        }
+
+        isPreMerging = true;
+        body.linearVelocity *= 0.18f;
+        body.angularVelocity *= 0.18f;
+        preMergeChargeRoutine = StartCoroutine(PreMergeChargeRoutine(contactPoint, feel));
+    }
+
+    public void EndPreMergeCharge()
+    {
+        isPreMerging = false;
+        if (preMergeChargeRoutine != null)
+        {
+            StopCoroutine(preMergeChargeRoutine);
+            preMergeChargeRoutine = null;
+        }
+
+        transform.localScale = targetScale;
+        if (!hasMagneticTension)
+        {
+            ClearResonance();
+        }
+    }
+
+    public void SetMagneticTension(float strength)
+    {
+        if (isMerging || isPreMerging || spriteRenderer == null)
+        {
+            return;
+        }
+
+        hasMagneticTension = strength > 0f;
+        if (!hasMagneticTension)
+        {
+            ClearResonance();
+            return;
+        }
+
+        EnsureResonanceGlow();
+        var clamped = Mathf.Clamp01(strength);
+        var pulse = Mathf.Sin(Time.time * 5.4f) * 0.5f + 0.5f;
+        var glowColor = CosmicBodyConfig.GetGlowColor(Level);
+        spriteRenderer.color = Color.Lerp(baseColor, Color.Lerp(glowColor, Color.white, 0.24f), 0.16f * clamped);
+        glowColor.a = Mathf.Lerp(0.08f, 0.26f, pulse) * clamped;
+        resonanceGlow.color = glowColor;
+        resonanceGlow.transform.localScale = Vector3.one * Mathf.Lerp(1.08f, 1.2f, pulse);
+        resonanceGlow.enabled = true;
+    }
+
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (isMerging || controller == null || controller.IsGameOver)
+        if (isMerging || isPreMerging || controller == null || controller.IsGameOver)
         {
             return;
         }
 
         var other = collision.collider.GetComponent<Ball>();
-        if (other == null || other == this || other.isMerging || other.Level != Level)
+        if (other == null || other == this || other.isMerging || other.isPreMerging || other.Level != Level)
         {
             if (collision.relativeVelocity.sqrMagnitude > 0.18f)
             {
@@ -228,18 +294,19 @@ public sealed class Ball : MonoBehaviour
             return;
         }
 
-        controller.MergeBalls(this, other);
+        var contactPoint = collision.contactCount > 0 ? collision.GetContact(0).point : (Vector2)(transform.position + other.transform.position) * 0.5f;
+        controller.TryStartPreMerge(this, other, contactPoint);
     }
 
     private void OnCollisionStay2D(Collision2D collision)
     {
-        if (isMerging || body == null)
+        if (isMerging || isPreMerging || body == null)
         {
             return;
         }
 
         var other = collision.collider.GetComponent<Ball>();
-        if (other == null || other.isMerging || transform.position.y <= other.transform.position.y)
+        if (other == null || other.isMerging || other.isPreMerging || transform.position.y <= other.transform.position.y)
         {
             return;
         }
@@ -264,6 +331,7 @@ public sealed class Ball : MonoBehaviour
 
     private void OnDestroy()
     {
+        EndPreMergeCharge();
         if (controller != null)
         {
             controller.UnregisterBall(this);
@@ -364,16 +432,16 @@ public sealed class Ball : MonoBehaviour
         popGlow.enabled = false;
     }
 
-    private IEnumerator MergeBirthRoutine(int level)
+    private IEnumerator MergeBirthRoutine(int level, CosmicBodyFeel feel)
     {
         EnsurePopGlow();
         popGlow.enabled = true;
 
         var glowColor = CosmicBodyConfig.GetGlowColor(level);
-        var duration = level >= 8 ? 0.3f : level >= 6 ? 0.26f : 0.22f;
+        var duration = feel.MergeBirthDuration;
         var elapsed = 0f;
         var startScale = targetScale * 0.55f;
-        var overshootScale = targetScale * (level >= 8 ? 1.22f : level >= 6 ? 1.17f : 1.12f);
+        var overshootScale = targetScale * feel.MergeOverscale;
         transform.localScale = startScale;
 
         while (elapsed < duration)
@@ -393,12 +461,54 @@ public sealed class Ball : MonoBehaviour
 
             glowColor.a = Mathf.Lerp(level >= 6 ? 0.42f : 0.28f, 0f, t);
             popGlow.color = glowColor;
-            popGlow.transform.localScale = Vector3.one * Mathf.Lerp(1.1f, level >= 8 ? 1.72f : 1.46f, t);
+            popGlow.transform.localScale = Vector3.one * Mathf.Lerp(1.1f, level >= 8 ? 1.82f : 1.5f, t);
             yield return null;
         }
 
         transform.localScale = targetScale;
         popGlow.enabled = false;
+    }
+
+    private IEnumerator PreMergeChargeRoutine(Vector2 contactPoint, CosmicBodyFeel feel)
+    {
+        EnsurePopGlow();
+        popGlow.enabled = true;
+
+        var startPosition = transform.position;
+        var direction = ((Vector2)transform.position - contactPoint).normalized;
+        if (direction.sqrMagnitude <= 0.001f)
+        {
+            direction = Vector2.right;
+        }
+
+        var elapsed = 0f;
+        const float duration = 0.16f;
+        var squash = Mathf.Clamp(feel.PreMergeSquash, 0.04f, 0.16f);
+        var glowColor = CosmicBodyConfig.GetGlowColor(Level);
+
+        while (elapsed < duration && isPreMerging)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / duration);
+            var pulse = Mathf.Sin(t * Mathf.PI * 8f);
+            var charge = AnimationEasing.EaseOutCubic(t);
+            var squashAmount = squash * (0.45f + charge * 0.55f);
+            transform.localScale = new Vector3(
+                targetScale.x * (1f + squashAmount * 0.42f),
+                targetScale.y * (1f - squashAmount),
+                targetScale.z);
+            transform.position = startPosition + (Vector3)(direction * pulse * 0.018f * (1f + charge));
+
+            glowColor.a = Mathf.Lerp(0.08f, 0.34f, charge);
+            popGlow.color = glowColor;
+            popGlow.transform.localScale = Vector3.one * Mathf.Lerp(1.06f, 1.34f, charge);
+            yield return null;
+        }
+
+        transform.position = startPosition;
+        transform.localScale = targetScale;
+        popGlow.enabled = false;
+        preMergeChargeRoutine = null;
     }
 
     private IEnumerator BlackHoleAbsorptionRoutine(Vector2 blackHoleCenter, float duration)

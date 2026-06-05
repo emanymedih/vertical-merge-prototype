@@ -172,7 +172,7 @@ public sealed class BlackHoleGravityField : MonoBehaviour
 
     private bool CanAbsorb(Ball target)
     {
-        if (target == null || target == source || target.IsMerging || target.Level > MaxAbsorbLevel)
+        if (target == null || target == source || target.IsMerging || target.IsPreMerging || target.Level > MaxAbsorbLevel)
         {
             return false;
         }

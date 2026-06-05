@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class GameEffects : MonoBehaviour
@@ -11,6 +12,9 @@ public sealed class GameEffects : MonoBehaviour
     [SerializeField] private float peakLevelShakeDuration = 0.16f;
 
     private CameraShake cameraShake;
+    private readonly Queue<SpriteRenderer> circleRendererPool = new Queue<SpriteRenderer>();
+    private readonly Queue<TextMesh> floatingScorePool = new Queue<TextMesh>();
+    private readonly Queue<ParticleSystem> particlePool = new Queue<ParticleSystem>();
 
     public void Initialize(Camera mainCamera)
     {
@@ -19,45 +23,41 @@ public sealed class GameEffects : MonoBehaviour
 
     public void PlayMerge(Vector2 position, int level, int score)
     {
-        StartCoroutine(MergeFlashRoutine(position, level));
+        var feel = CosmicBodyFeelDatabase.Get(level);
+        StartCoroutine(MergeFlashRoutine(position, level, feel));
         if (score > 0)
         {
-            StartCoroutine(FloatingScoreRoutine(position, score, level));
+            StartCoroutine(FloatingScoreRoutine(position, score, level, feel));
         }
 
-        PlayParticles(position, level);
+        PlayParticles(position, level, feel);
 
         if (level >= highImpactLevel)
         {
-            var shakeStrength = level >= peakImpactLevel
-                ? Mathf.Min(0.052f + level * 0.008f, 0.11f)
-                : Mathf.Min(0.03f + level * 0.005f, 0.065f);
+            var shakeStrength = feel.ShakeStrength;
             cameraShake.Shake(level >= peakImpactLevel ? peakLevelShakeDuration : highLevelShakeDuration, shakeStrength);
         }
     }
 
-    private IEnumerator MergeFlashRoutine(Vector2 position, int level)
+    private IEnumerator MergeFlashRoutine(Vector2 position, int level, CosmicBodyFeel feel)
     {
-        var coreFlash = new GameObject("Merge Core Flash");
+        var coreRenderer = GetCircleRenderer("Merge Core Flash", 30);
+        var coreFlash = coreRenderer.gameObject;
         coreFlash.transform.position = position;
-
-        var coreRenderer = coreFlash.AddComponent<SpriteRenderer>();
         coreRenderer.sprite = CircleSpriteCache.Circle;
         var flashColor = Color.Lerp(CircleSpriteCache.GetBallColor(level), CosmicBodyConfig.GetGlowColor(level), level >= highImpactLevel ? 0.45f : 0.2f);
         coreRenderer.color = flashColor;
-        coreRenderer.sortingOrder = 30;
 
-        var ring = new GameObject("Merge Shockwave Ring");
+        var ringRenderer = GetCircleRenderer("Merge Shockwave Ring", 29);
+        var ring = ringRenderer.gameObject;
         ring.transform.position = position;
-        var ringRenderer = ring.AddComponent<SpriteRenderer>();
         ringRenderer.sprite = CircleSpriteCache.Circle;
         ringRenderer.color = CosmicBodyConfig.GetGlowColor(level);
-        ringRenderer.sortingOrder = 29;
 
         var startScale = Vector3.one * Ball.GetDiameter(level);
-        var coreEndScale = startScale * GetFlashScale(level);
+        var coreEndScale = startScale * feel.FlashScale;
         var ringStartScale = startScale * 0.82f;
-        var ringEndScale = startScale * GetRingScale(level);
+        var ringEndScale = startScale * feel.RingScale;
         var elapsed = 0f;
         var duration = level >= peakImpactLevel ? 0.28f : level >= highImpactLevel ? 0.25f : baseMergeFlashDuration;
 
@@ -80,16 +80,16 @@ public sealed class GameEffects : MonoBehaviour
             yield return null;
         }
 
-        Destroy(coreFlash);
-        Destroy(ring);
+        ReturnCircleRenderer(coreRenderer);
+        ReturnCircleRenderer(ringRenderer);
     }
 
-    private IEnumerator FloatingScoreRoutine(Vector2 position, int score, int level)
+    private IEnumerator FloatingScoreRoutine(Vector2 position, int score, int level, CosmicBodyFeel feel)
     {
-        var scoreObject = new GameObject("Floating Score");
+        var textMesh = GetFloatingScore();
+        var scoreObject = textMesh.gameObject;
         scoreObject.transform.position = new Vector3(position.x, position.y + Ball.GetDiameter(level) * 0.45f, -0.2f);
 
-        var textMesh = scoreObject.AddComponent<TextMesh>();
         textMesh.text = $"+{score}";
         textMesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         textMesh.fontSize = GetFloatingScoreFontSize(level);
@@ -131,15 +131,15 @@ public sealed class GameEffects : MonoBehaviour
             yield return null;
         }
 
-        Destroy(scoreObject);
+        ReturnFloatingScore(textMesh);
     }
 
-    private void PlayParticles(Vector2 position, int level)
+    private void PlayParticles(Vector2 position, int level, CosmicBodyFeel feel)
     {
-        var particleObject = new GameObject("Merge Particles");
+        var particles = GetParticles();
+        var particleObject = particles.gameObject;
         particleObject.transform.position = position;
 
-        var particles = particleObject.AddComponent<ParticleSystem>();
         particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         var main = particles.main;
@@ -150,19 +150,24 @@ public sealed class GameEffects : MonoBehaviour
         main.startSpeed = level >= peakImpactLevel ? 2.35f + level * 0.08f : level >= highImpactLevel ? 2f + level * 0.08f : 1.62f + level * 0.08f;
         main.startSize = level >= peakImpactLevel ? 0.15f : level >= highImpactLevel ? 0.12f : 0.075f;
         main.startColor = Color.Lerp(CircleSpriteCache.GetBallColor(level), CosmicBodyConfig.GetGlowColor(level), 0.35f);
-        main.maxParticles = level >= peakImpactLevel ? 42 : level >= highImpactLevel ? 34 : 20;
+        main.maxParticles = Mathf.Max(feel.ParticlesCount, 12);
 
         var emission = particles.emission;
         emission.enabled = false;
+
+        var velocityLimit = particles.limitVelocityOverLifetime;
+        velocityLimit.enabled = true;
+        velocityLimit.limit = 3.4f;
+        velocityLimit.dampen = 0.58f;
+        velocityLimit.drag = level >= highImpactLevel ? 1.5f : 1.1f;
 
         var shape = particles.shape;
         shape.enabled = true;
         shape.shapeType = ParticleSystemShapeType.Circle;
         shape.radius = 0.25f;
 
-        var maxBurst = level >= peakImpactLevel ? 42 : level >= highImpactLevel ? 34 : 20;
-        particles.Emit(Mathf.Clamp(8 + level * 2, 10, maxBurst));
-        Destroy(particleObject, 1f);
+        particles.Emit(Mathf.Clamp(feel.ParticlesCount, 10, Mathf.Max(feel.ParticlesCount, 12)));
+        StartCoroutine(ReturnParticlesRoutine(particles, Mathf.Max(main.startLifetime.constantMax, 0.6f) + 0.2f));
     }
 
     private float GetFlashScale(int level)
@@ -203,5 +208,79 @@ public sealed class GameEffects : MonoBehaviour
         }
 
         return level >= highImpactLevel ? 1.24f : 1f;
+    }
+
+    private SpriteRenderer GetCircleRenderer(string objectName, int sortingOrder)
+    {
+        SpriteRenderer renderer;
+        if (circleRendererPool.Count > 0)
+        {
+            renderer = circleRendererPool.Dequeue();
+            renderer.gameObject.name = objectName;
+        }
+        else
+        {
+            var effectObject = new GameObject(objectName);
+            renderer = effectObject.AddComponent<SpriteRenderer>();
+        }
+
+        renderer.gameObject.SetActive(true);
+        renderer.sortingOrder = sortingOrder;
+        renderer.transform.localRotation = Quaternion.identity;
+        return renderer;
+    }
+
+    private void ReturnCircleRenderer(SpriteRenderer renderer)
+    {
+        renderer.gameObject.SetActive(false);
+        circleRendererPool.Enqueue(renderer);
+    }
+
+    private TextMesh GetFloatingScore()
+    {
+        TextMesh textMesh;
+        if (floatingScorePool.Count > 0)
+        {
+            textMesh = floatingScorePool.Dequeue();
+        }
+        else
+        {
+            var scoreObject = new GameObject("Floating Score");
+            textMesh = scoreObject.AddComponent<TextMesh>();
+        }
+
+        textMesh.gameObject.SetActive(true);
+        return textMesh;
+    }
+
+    private void ReturnFloatingScore(TextMesh textMesh)
+    {
+        textMesh.gameObject.SetActive(false);
+        floatingScorePool.Enqueue(textMesh);
+    }
+
+    private ParticleSystem GetParticles()
+    {
+        ParticleSystem particles;
+        if (particlePool.Count > 0)
+        {
+            particles = particlePool.Dequeue();
+        }
+        else
+        {
+            var particleObject = new GameObject("Merge Particles");
+            particles = particleObject.AddComponent<ParticleSystem>();
+        }
+
+        particles.gameObject.SetActive(true);
+        return particles;
+    }
+
+    private IEnumerator ReturnParticlesRoutine(ParticleSystem particles, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        particles.gameObject.SetActive(false);
+        particlePool.Enqueue(particles);
     }
 }

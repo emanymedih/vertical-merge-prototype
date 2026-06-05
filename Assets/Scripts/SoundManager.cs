@@ -43,6 +43,16 @@ public sealed class SoundManager : MonoBehaviour
         Instance.PlayEvent(soundEvent);
     }
 
+    public static void PlayMerge(CosmicBodyFeel feel)
+    {
+        if (Instance == null)
+        {
+            return;
+        }
+
+        Instance.PlayMergeEvent(feel);
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -57,5 +67,11 @@ public sealed class SoundManager : MonoBehaviour
     private void PlayEvent(SoundEvent soundEvent)
     {
         // Placeholder hook for the MVP sound pass. Final clips can be mapped here later.
+    }
+
+    private void PlayMergeEvent(CosmicBodyFeel feel)
+    {
+        // Placeholder hook: final audio clip lookup can use feel.AudioClipId and feel.Pitch
+        // when the Unity Audio module/assets are enabled.
     }
 }
