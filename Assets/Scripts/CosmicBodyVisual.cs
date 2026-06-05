@@ -94,7 +94,7 @@ public sealed class CosmicBodyVisual : MonoBehaviour
     {
         var rimColor = Color.Lerp(metadata.GlowColor, Color.white, metadata.Level >= 8 ? 0.18f : 0.08f);
         var alpha = metadata.Level >= 6 ? 0.32f : 0.22f;
-        AddCircle("Readability Rim", Vector2.zero, 1.045f, WithAlpha(rimColor, alpha), mainRenderer.sortingOrder - 1);
+        AddCircle("Readability Rim", Vector2.zero, 1.045f, WithAlpha(rimColor, alpha), mainRenderer.sortingOrder - 1, true);
     }
 
     private void AddSpots(Color color, Vector2[] positions, float[] sizes)
@@ -109,7 +109,7 @@ public sealed class CosmicBodyVisual : MonoBehaviour
 
     private void AddGlow(Color color, float alpha, float scale)
     {
-        AddCircle("Body Glow", Vector2.zero, scale, WithAlpha(color, alpha), mainRenderer.sortingOrder - 2);
+        AddCircle("Body Glow", Vector2.zero, scale, WithAlpha(color, alpha), mainRenderer.sortingOrder - 2, true);
     }
 
     private void AddCore(Color color, float scale, float alpha, int sortingOffset = 2)
@@ -119,7 +119,7 @@ public sealed class CosmicBodyVisual : MonoBehaviour
 
     private void AddRing(Color color, float alpha, float scaleX, float scaleY)
     {
-        AddShape("Energy Ring", Vector2.zero, new Vector2(scaleX, scaleY), WithAlpha(color, alpha), mainRenderer.sortingOrder + 1, CircleSpriteCache.Circle);
+        AddShape("Energy Ring", Vector2.zero, new Vector2(scaleX, scaleY), WithAlpha(color, alpha), mainRenderer.sortingOrder + 1, CircleSpriteCache.Circle, true);
     }
 
     private void AddBand(Vector2 position, float width, float height, Color color, float alpha)
@@ -127,12 +127,12 @@ public sealed class CosmicBodyVisual : MonoBehaviour
         AddShape("Atmosphere Band", position, new Vector2(width, height), WithAlpha(color, alpha), mainRenderer.sortingOrder + 1, CircleSpriteCache.Square);
     }
 
-    private void AddCircle(string name, Vector2 position, float scale, Color color, int sortingOrder)
+    private void AddCircle(string name, Vector2 position, float scale, Color color, int sortingOrder, bool useGlowMaterial = false)
     {
-        AddShape(name, position, new Vector2(scale, scale), color, sortingOrder, CircleSpriteCache.Circle);
+        AddShape(name, position, new Vector2(scale, scale), color, sortingOrder, CircleSpriteCache.Circle, useGlowMaterial);
     }
 
-    private void AddShape(string name, Vector2 position, Vector2 scale, Color color, int sortingOrder, Sprite sprite)
+    private void AddShape(string name, Vector2 position, Vector2 scale, Color color, int sortingOrder, Sprite sprite, bool useGlowMaterial = false)
     {
         var shape = new GameObject(name);
         shape.transform.SetParent(visualRoot);
@@ -144,6 +144,19 @@ public sealed class CosmicBodyVisual : MonoBehaviour
         renderer.sprite = sprite;
         renderer.color = color;
         renderer.sortingOrder = sortingOrder;
+        if (useGlowMaterial)
+        {
+            var material = RuntimeMaterials.CreateAtmosphereGlow(color, 0.88f, 1.1f + GetPulseOffset(sortingOrder));
+            if (material != null)
+            {
+                renderer.material = material;
+            }
+        }
+    }
+
+    private static float GetPulseOffset(int sortingOrder)
+    {
+        return Mathf.Repeat(sortingOrder * 0.17f, 1.2f);
     }
 
     private static Color WithAlpha(Color color, float alpha)

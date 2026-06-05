@@ -22,10 +22,12 @@ public static class CosmicArenaVisuals
         if (CreateWallpaper(parent, cameraToUse, visibleWidth, halfHeight * 2f))
         {
             CreatePanel(parent, "Wallpaper Depth Fade", Vector2.zero, new Vector2(visibleWidth + 0.8f, halfHeight * 2f + 0.8f), new Color(0f, 0.01f, 0.025f, 0.12f), -34);
+            CreatePanel(parent, "Atmospheric Shader Haze", Vector2.zero, new Vector2(visibleWidth + 1.1f, halfHeight * 2f + 1f), new Color(1f, 1f, 1f, 0.38f), -33, RuntimeMaterials.NebulaBackdrop);
             return;
         }
 
         CreatePanel(parent, "Deep Space Backdrop", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(0.01f, 0.014f, 0.032f), -40);
+        CreatePanel(parent, "Procedural Nebula Atmosphere", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(1f, 1f, 1f, 0.72f), -39, RuntimeMaterials.NebulaBackdrop);
         CreatePanel(parent, "Upper Nebula Haze", new Vector2(0f, halfHeight * 0.38f), new Vector2(visibleWidth + 1.8f, halfHeight * 0.96f), new Color(0.055f, 0.07f, 0.14f, 0.46f), -39);
         CreatePanel(parent, "Lower Gravity Shadow", new Vector2(0f, -halfHeight * 0.5f), new Vector2(visibleWidth + 1.8f, halfHeight * 0.84f), new Color(0.002f, 0.006f, 0.018f, 0.64f), -38);
         CreatePanel(parent, "Center Chamber Vignette", Vector2.zero, new Vector2(visibleWidth * 0.86f, halfHeight * 1.58f), new Color(0.08f, 0.13f, 0.19f, 0.12f), -37);
@@ -83,21 +85,21 @@ public static class CosmicArenaVisuals
 
         CreatePanel(parent, "Left Chamber Wall Core", new Vector2(bounds.Left - 0.12f, centerY), new Vector2(0.24f, height + 0.1f), wallCore, 1);
         CreatePanel(parent, "Right Chamber Wall Core", new Vector2(bounds.Right + 0.12f, centerY), new Vector2(0.24f, height + 0.1f), wallCore, 1);
-        CreatePanel(parent, "Left Outer Energy Bloom", new Vector2(bounds.Left - 0.06f, centerY), new Vector2(0.32f, height), new Color(0.08f, 0.58f, 1f, 0.11f), 2);
-        CreatePanel(parent, "Right Outer Energy Bloom", new Vector2(bounds.Right + 0.06f, centerY), new Vector2(0.32f, height), new Color(0.08f, 0.58f, 1f, 0.11f), 2);
-        CreatePanel(parent, "Left Inner Energy Boundary", new Vector2(bounds.Left + 0.018f, centerY), new Vector2(0.036f, height), cyanGlow, 5);
-        CreatePanel(parent, "Right Inner Energy Boundary", new Vector2(bounds.Right - 0.018f, centerY), new Vector2(0.036f, height), cyanGlow, 5);
-        CreatePanel(parent, "Left Hot Boundary Core", new Vector2(bounds.Left + 0.034f, centerY), new Vector2(0.012f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6);
-        CreatePanel(parent, "Right Hot Boundary Core", new Vector2(bounds.Right - 0.034f, centerY), new Vector2(0.012f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6);
+        CreatePanel(parent, "Left Outer Energy Bloom", new Vector2(bounds.Left - 0.06f, centerY), new Vector2(0.32f, height), new Color(0.08f, 0.58f, 1f, 0.11f), 2, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.58f, 1f, 0.32f), 0.56f, 1.2f));
+        CreatePanel(parent, "Right Outer Energy Bloom", new Vector2(bounds.Right + 0.06f, centerY), new Vector2(0.32f, height), new Color(0.08f, 0.58f, 1f, 0.11f), 2, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.58f, 1f, 0.32f), 0.56f, 1.2f));
+        CreatePanel(parent, "Left Inner Energy Boundary", new Vector2(bounds.Left + 0.018f, centerY), new Vector2(0.036f, height), cyanGlow, 5, RuntimeMaterials.CreateEnergyBeam(cyanGlow, 1.15f, 1.6f));
+        CreatePanel(parent, "Right Inner Energy Boundary", new Vector2(bounds.Right - 0.018f, centerY), new Vector2(0.036f, height), cyanGlow, 5, RuntimeMaterials.CreateEnergyBeam(cyanGlow, 1.15f, 1.6f));
+        CreatePanel(parent, "Left Hot Boundary Core", new Vector2(bounds.Left + 0.034f, centerY), new Vector2(0.012f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.78f, 0.98f, 1f, 0.72f), 1.4f, 2.4f));
+        CreatePanel(parent, "Right Hot Boundary Core", new Vector2(bounds.Right - 0.034f, centerY), new Vector2(0.012f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.78f, 0.98f, 1f, 0.72f), 1.4f, 2.4f));
 
         CreatePanel(parent, "Gravity Platform Body", new Vector2(0f, bounds.Bottom - 0.12f), new Vector2(bounds.Width + 0.5f, 0.24f), new Color(0.025f, 0.075f, 0.105f, 0.94f), 1);
-        CreatePanel(parent, "Gravity Platform Bloom", new Vector2(0f, bounds.Bottom + 0.02f), new Vector2(bounds.Width + 0.5f, 0.16f), new Color(0.08f, 0.66f, 1f, 0.16f), 3);
-        CreatePanel(parent, "Gravity Platform Hot Edge", new Vector2(0f, bounds.Bottom + 0.055f), new Vector2(bounds.Width + 0.32f, 0.042f), new Color(0.48f, 0.94f, 1f, 0.62f), 6);
+        CreatePanel(parent, "Gravity Platform Bloom", new Vector2(0f, bounds.Bottom + 0.02f), new Vector2(bounds.Width + 0.5f, 0.16f), new Color(0.08f, 0.66f, 1f, 0.16f), 3, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.66f, 1f, 0.3f), 0.8f, 1.3f));
+        CreatePanel(parent, "Gravity Platform Hot Edge", new Vector2(0f, bounds.Bottom + 0.055f), new Vector2(bounds.Width + 0.32f, 0.042f), new Color(0.48f, 0.94f, 1f, 0.62f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.48f, 0.94f, 1f, 0.76f), 1.2f, 2.1f));
         CreatePanel(parent, "Chamber Interior Depth", new Vector2(0f, centerY), new Vector2(bounds.Width, height), new Color(0f, 0f, 0f, 0.13f), -1);
         CreatePanel(parent, "Top Field Fade", new Vector2(0f, bounds.Top - 0.28f), new Vector2(bounds.Width + 0.4f, 0.56f), new Color(0.04f, 0.09f, 0.14f, 0.22f), 0);
     }
 
-    private static void CreatePanel(Transform parent, string name, Vector2 position, Vector2 scale, Color color, int sortingOrder)
+    private static void CreatePanel(Transform parent, string name, Vector2 position, Vector2 scale, Color color, int sortingOrder, Material material = null)
     {
         var panel = new GameObject(name);
         panel.transform.SetParent(parent);
@@ -108,6 +110,10 @@ public static class CosmicArenaVisuals
         renderer.sprite = CircleSpriteCache.Square;
         renderer.color = color;
         renderer.sortingOrder = sortingOrder;
+        if (material != null)
+        {
+            renderer.material = material;
+        }
     }
 
     private static void CreateCircle(Transform parent, string name, Vector2 position, float scale, Color color, int sortingOrder)

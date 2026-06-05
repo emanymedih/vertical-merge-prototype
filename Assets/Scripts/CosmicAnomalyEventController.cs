@@ -379,6 +379,12 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
         renderer.numCornerVertices = 2;
         renderer.sortingOrder = sortingOrder;
         renderer.material = new Material(Shader.Find("Sprites/Default"));
+        var material = RuntimeMaterials.CreateEnergyBeam(new Color(1f, 0.1f, 0.22f, 0.86f), 1.1f, 3.2f);
+        if (material != null)
+        {
+            renderer.material = material;
+        }
+
         renderer.enabled = false;
         return renderer;
     }
