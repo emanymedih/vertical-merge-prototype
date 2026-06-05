@@ -83,7 +83,7 @@ public sealed class StressOverlay : MonoBehaviour
 
     private float CalculateStress()
     {
-        var highestTop = controller.GetHighestBallTopY();
+        var highestTop = controller.GetHighestSettledBallTopY();
         var stackStress = highestTop < -100f ? 0f : Mathf.Clamp01(1f - ((dangerY - highestTop) / StackWarningRange));
         var pressureStress = pressureFloor != null ? pressureFloor.PressureProgress : 0f;
         return Mathf.Clamp01(Mathf.Max(controller.DangerPressure, stackStress * 0.72f, pressureStress * 0.48f));

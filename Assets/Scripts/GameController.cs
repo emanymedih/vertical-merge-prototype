@@ -536,6 +536,35 @@ public sealed class GameController : MonoBehaviour
         return highest == float.MinValue ? -999f : highest;
     }
 
+    public float GetHighestSettledBallTopY()
+    {
+        var highest = float.MinValue;
+        for (var i = 0; i < activeBalls.Count; i++)
+        {
+            var ball = activeBalls[i];
+            if (ball == null || ball.IsMerging || ball.IsPreMerging || ball.Body == null)
+            {
+                continue;
+            }
+
+            if (Time.time - ball.SpawnedAt < 1.25f)
+            {
+                continue;
+            }
+
+            var settled = ball.Body.linearVelocity.sqrMagnitude <= 0.55f * 0.55f
+                && Mathf.Abs(ball.Body.angularVelocity) <= 75f;
+            if (!settled)
+            {
+                continue;
+            }
+
+            highest = Mathf.Max(highest, ball.transform.position.y + ball.Radius);
+        }
+
+        return highest == float.MinValue ? -999f : highest;
+    }
+
     private bool TryShowDiscovery(int level)
     {
         if (level < 2)
