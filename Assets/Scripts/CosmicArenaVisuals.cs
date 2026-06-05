@@ -10,19 +10,24 @@ public static class CosmicArenaVisuals
         var root = new GameObject("Cosmic Arena Visuals");
         root.transform.SetParent(parent);
 
-        CreateBackground(root.transform, cameraToUse);
+        CreateBackground(root.transform, cameraToUse, bounds);
         CreateEnergyBoundaries(root.transform, bounds);
     }
 
-    private static void CreateBackground(Transform parent, Camera cameraToUse)
+    private static void CreateBackground(Transform parent, Camera cameraToUse, ContainerBounds bounds)
     {
         var halfHeight = cameraToUse.orthographicSize;
         var visibleWidth = halfHeight * 2f * cameraToUse.aspect;
+        var chamberCenter = new Vector2(0f, (bounds.Bottom + bounds.Top) * 0.5f);
+        var chamberHeight = bounds.Top - bounds.Bottom;
 
-        if (CreateWallpaper(parent, cameraToUse, visibleWidth, halfHeight * 2f))
+        CreatePanel(parent, "Outer Deep Space Backdrop", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(0.004f, 0.008f, 0.02f, 1f), -48);
+        CreatePanel(parent, "Outer Space Atmosphere", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(1f, 1f, 1f, 0.24f), -47, RuntimeMaterials.NebulaBackdrop);
+
+        if (CreateWallpaper(parent, chamberCenter, bounds.Width + 0.16f, chamberHeight + 0.16f))
         {
-            CreatePanel(parent, "Wallpaper Depth Fade", Vector2.zero, new Vector2(visibleWidth + 0.8f, halfHeight * 2f + 0.8f), new Color(0f, 0.01f, 0.025f, 0.12f), -34);
-            CreatePanel(parent, "Atmospheric Shader Haze", Vector2.zero, new Vector2(visibleWidth + 1.1f, halfHeight * 2f + 1f), new Color(1f, 1f, 1f, 0.38f), -33, RuntimeMaterials.NebulaBackdrop);
+            CreatePanel(parent, "Wallpaper Depth Fade", chamberCenter, new Vector2(bounds.Width + 0.2f, chamberHeight + 0.2f), new Color(0f, 0.01f, 0.025f, 0.16f), -34);
+            CreatePanel(parent, "Atmospheric Shader Haze", chamberCenter, new Vector2(bounds.Width + 0.28f, chamberHeight + 0.28f), new Color(1f, 1f, 1f, 0.34f), -33, RuntimeMaterials.NebulaBackdrop);
             return;
         }
 
@@ -46,7 +51,7 @@ public static class CosmicArenaVisuals
         Random.state = previousRandomState;
     }
 
-    private static bool CreateWallpaper(Transform parent, Camera cameraToUse, float visibleWidth, float visibleHeight)
+    private static bool CreateWallpaper(Transform parent, Vector2 center, float targetWidth, float targetHeight)
     {
         var sprite = Resources.Load<Sprite>(WallpaperResourceName);
         if (sprite == null)
@@ -62,7 +67,7 @@ public static class CosmicArenaVisuals
 
         var wallpaper = new GameObject("Gravitational Chamber Wallpaper");
         wallpaper.transform.SetParent(parent);
-        wallpaper.transform.position = new Vector3(cameraToUse.transform.position.x, cameraToUse.transform.position.y, 0f);
+        wallpaper.transform.position = new Vector3(center.x, center.y, 0f);
 
         var renderer = wallpaper.AddComponent<SpriteRenderer>();
         renderer.sprite = sprite;
@@ -71,7 +76,7 @@ public static class CosmicArenaVisuals
 
         var spriteWidth = sprite.bounds.size.x;
         var spriteHeight = sprite.bounds.size.y;
-        var coverScale = Mathf.Max(visibleWidth / spriteWidth, visibleHeight / spriteHeight);
+        var coverScale = Mathf.Min(targetWidth / spriteWidth, targetHeight / spriteHeight);
         wallpaper.transform.localScale = Vector3.one * coverScale;
         return true;
     }
