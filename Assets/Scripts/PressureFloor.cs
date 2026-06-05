@@ -32,6 +32,8 @@ public sealed class PressureFloor : MonoBehaviour
     private float baseRiseSpeed;
     private float maxRiseSpeed;
 
+    public float PressureProgress => Mathf.Clamp01(Mathf.InverseLerp(bottomY, dangerY, currentY));
+
     public void Initialize(GameController gameController, ContainerBounds bounds, bool firstSessionPacingActive)
     {
         controller = gameController;

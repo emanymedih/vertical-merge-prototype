@@ -39,6 +39,34 @@ public sealed class GameEffects : MonoBehaviour
         }
     }
 
+    public void PlayCriticalMerge(Vector2 position, int level, int score)
+    {
+        PlayMerge(position, level, score);
+        StartCoroutine(SpecialPulseRoutine(position, level, new Color(0.92f, 0.98f, 1f), new Color(1f, 0.46f, 0.92f), 0.34f, 3.2f));
+        StartCoroutine(FloatingMessageRoutine(position + Vector2.up * 0.36f, "Critical Merge!", new Color(1f, 0.82f, 1f), 0.86f));
+        cameraShake?.Shake(0.18f, Mathf.Max(0.12f, CosmicBodyFeelDatabase.Get(level).ShakeStrength * 1.24f));
+    }
+
+    public void PlayCometImpact(Vector2 position, int targetLevel)
+    {
+        StartCoroutine(SpecialPulseRoutine(position, Mathf.Max(2, targetLevel), new Color(0.8f, 1f, 1f), new Color(0.22f, 0.86f, 1f), 0.26f, 2.35f));
+        StartCoroutine(FloatingMessageRoutine(position + Vector2.up * 0.28f, "Comet Save!", new Color(0.76f, 1f, 1f), 0.72f));
+        PlayParticles(position, Mathf.Max(2, targetLevel), CosmicBodyFeelDatabase.Get(Mathf.Max(2, targetLevel)));
+        cameraShake?.Shake(0.1f, 0.055f);
+    }
+
+    public void PlayAnomalyEvaded(Vector2 position, int bonusScore)
+    {
+        StartCoroutine(SpecialPulseRoutine(position, 4, new Color(0.76f, 1f, 0.62f), new Color(1f, 0.84f, 0.28f), 0.24f, 2.25f));
+        StartCoroutine(FloatingMessageRoutine(position + Vector2.up * 0.34f, $"Evaded! +{bonusScore}", new Color(1f, 0.9f, 0.42f), 0.84f));
+        cameraShake?.Shake(0.08f, 0.035f);
+    }
+
+    public void PlayStressRelief()
+    {
+        StartCoroutine(FloatingMessageRoutine(new Vector2(0f, 1.1f), "Saved!", new Color(0.72f, 1f, 1f), 0.68f));
+    }
+
     private IEnumerator MergeFlashRoutine(Vector2 position, int level, CosmicBodyFeel feel)
     {
         var coreRenderer = GetCircleRenderer("Merge Core Flash", 30);
@@ -76,6 +104,41 @@ public sealed class GameEffects : MonoBehaviour
 
             var ringColor = ringRenderer.color;
             ringColor.a = Mathf.Lerp(level >= peakImpactLevel ? 0.66f : level >= highImpactLevel ? 0.48f : 0.32f, 0f, t);
+            ringRenderer.color = ringColor;
+            yield return null;
+        }
+
+        ReturnCircleRenderer(coreRenderer);
+        ReturnCircleRenderer(ringRenderer);
+    }
+
+    private IEnumerator SpecialPulseRoutine(Vector2 position, int level, Color coreColor, Color ringColor, float duration, float ringScale)
+    {
+        var coreRenderer = GetCircleRenderer("Special Event Core Flash", 32);
+        var ringRenderer = GetCircleRenderer("Special Event Shockwave", 31);
+
+        coreRenderer.transform.position = position;
+        ringRenderer.transform.position = position;
+        coreRenderer.sprite = CircleSpriteCache.Circle;
+        ringRenderer.sprite = CircleSpriteCache.Circle;
+
+        var startScale = Vector3.one * Ball.GetDiameter(level) * 0.6f;
+        var coreEndScale = Vector3.one * Ball.GetDiameter(level) * 1.6f;
+        var ringEndScale = Vector3.one * Ball.GetDiameter(level) * ringScale;
+        var elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / duration);
+            var eased = AnimationEasing.EaseOutCubic(t);
+
+            coreRenderer.transform.localScale = Vector3.Lerp(startScale, coreEndScale, eased);
+            ringRenderer.transform.localScale = Vector3.Lerp(startScale * 0.8f, ringEndScale, eased);
+
+            coreColor.a = Mathf.Lerp(0.78f, 0f, eased);
+            ringColor.a = Mathf.Lerp(0.56f, 0f, t);
+            coreRenderer.color = coreColor;
             ringRenderer.color = ringColor;
             yield return null;
         }
@@ -128,6 +191,42 @@ public sealed class GameEffects : MonoBehaviour
             var color = textMesh.color;
             color.a = Mathf.Lerp(1f, 0f, Mathf.SmoothStep(0.62f, 1f, t));
             textMesh.color = color;
+            yield return null;
+        }
+
+        ReturnFloatingScore(textMesh);
+    }
+
+    private IEnumerator FloatingMessageRoutine(Vector2 position, string message, Color color, float duration)
+    {
+        var textMesh = GetFloatingScore();
+        var textObject = textMesh.gameObject;
+        textObject.transform.position = new Vector3(position.x, position.y, -0.3f);
+
+        textMesh.text = message;
+        textMesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        textMesh.fontSize = 46;
+        textMesh.characterSize = 0.045f;
+        textMesh.anchor = TextAnchor.MiddleCenter;
+        textMesh.alignment = TextAlignment.Center;
+        textMesh.color = color;
+
+        var renderer = textObject.GetComponent<MeshRenderer>();
+        renderer.sortingOrder = 52;
+
+        var startPosition = textObject.transform.position;
+        var endPosition = startPosition + Vector3.up * 0.54f;
+        var elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / duration);
+            textObject.transform.position = Vector3.Lerp(startPosition, endPosition, AnimationEasing.EaseOutCubic(t));
+            textObject.transform.localScale = Vector3.LerpUnclamped(Vector3.one * 0.72f, Vector3.one * 1.08f, AnimationEasing.EaseOutBack(Mathf.Clamp01(t / 0.22f)));
+
+            var textColor = textMesh.color;
+            textColor.a = Mathf.Lerp(1f, 0f, Mathf.SmoothStep(0.62f, 1f, t));
+            textMesh.color = textColor;
             yield return null;
         }
 

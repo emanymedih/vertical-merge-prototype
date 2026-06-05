@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class CosmicAnomalyEventController : MonoBehaviour
@@ -7,67 +8,33 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
     private const float FirstEventMaxDelay = 75f;
     private const float CooldownMinSeconds = 48f;
     private const float CooldownMaxSeconds = 66f;
-    private const float WarningSeconds = 2.6f;
-    private const float ActiveSeconds = 9.5f;
-    private const float PullRadius = 2.15f;
-    private const float AbsorptionRadius = 2.05f;
-    private const float PullAcceleration = 0.58f;
+    private const float TelegraphSeconds = 3.5f;
     private const float AbsorptionDurationSeconds = 0.68f;
-    private const float MinDistance = 0.22f;
-    private const int MaxAbsorbLevel = 4;
-    private const int MaxAbsorptionsPerEvent = 2;
+    private const float KnockoutDistance = 2f;
+    private const int MaxTargetLevel = 4;
+    private const int MaxTargetsPerEvent = 2;
 
+    private readonly List<TargetLock> targetLocks = new List<TargetLock>();
     private GameController controller;
     private ContainerBounds bounds;
     private Vector2 anomalyPosition;
     private SpriteRenderer outerRing;
     private SpriteRenderer innerRing;
     private SpriteRenderer core;
-    private SpriteRenderer targetMarker;
-    private SpriteRenderer beamRenderer;
-    private Ball currentTarget;
-    private bool isActive;
-    private bool isWarning;
-    private float warningStartedAt;
-    private float activeStartedAt;
+    private bool isEventActive;
+    private float eventStartedAt;
+    private float nextTickAt;
+
+    public static CosmicAnomalyEventController Instance { get; private set; }
 
     public void Initialize(GameController gameController, ContainerBounds containerBounds)
     {
+        Instance = this;
         controller = gameController;
         bounds = containerBounds;
         CreateVisuals();
         HideVisuals();
         StartCoroutine(EventLoopRoutine());
-    }
-
-    private void FixedUpdate()
-    {
-        if (!isActive || controller == null || controller.IsGameOver)
-        {
-            return;
-        }
-
-        var balls = controller.ActiveBalls;
-        for (var i = 0; i < balls.Count; i++)
-        {
-            var ball = balls[i];
-            if (!CanPull(ball))
-            {
-                continue;
-            }
-
-            var offset = anomalyPosition - (Vector2)ball.transform.position;
-            var distance = offset.magnitude;
-            if (distance <= MinDistance || distance > PullRadius)
-            {
-                continue;
-            }
-
-            var falloff = 1f - Mathf.Clamp01(distance / PullRadius);
-            var levelFactor = GetLevelPullFactor(ball.Level);
-            var acceleration = PullAcceleration * falloff * falloff * levelFactor;
-            ball.TryApplyExternalForce(offset.normalized * acceleration * ball.Mass);
-        }
     }
 
     private void Update()
@@ -81,21 +48,33 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
         }
 #endif
 
-        if (!isActive && !isWarning)
+        if (!isEventActive)
         {
             return;
         }
 
         if (controller == null || controller.IsGameOver)
         {
-            isActive = false;
-            isWarning = false;
             HideVisuals();
+            isEventActive = false;
             return;
         }
 
-        UpdateAnomalyVisuals();
-        UpdateTargetWarning();
+        var progress = Mathf.Clamp01((Time.time - eventStartedAt) / TelegraphSeconds);
+        UpdateAnomalyVisuals(progress);
+        UpdateTargetVisuals(progress);
+        CheckRescueConditions();
+        PlayTickFeedback(progress);
+    }
+
+    public void RegisterTargetMerged(Ball ball)
+    {
+        ResolveTarget(ball, true);
+    }
+
+    public void RegisterTargetDisrupted(Ball ball)
+    {
+        ResolveTarget(ball, true);
     }
 
     private IEnumerator EventLoopRoutine(float initialDelay = -1f)
@@ -118,14 +97,20 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
     private IEnumerator PlayAnomalyRoutine()
     {
         anomalyPosition = PickAnomalyPosition();
-        currentTarget = null;
-        isWarning = true;
-        isActive = false;
-        warningStartedAt = Time.time;
+        PickTargets();
+        if (targetLocks.Count == 0)
+        {
+            HideVisuals();
+            yield break;
+        }
+
+        isEventActive = true;
+        eventStartedAt = Time.time;
+        nextTickAt = Time.time;
         SetVisualsVisible(true);
         SoundManager.Play(SoundEvent.CosmicAnomalyWarning);
 
-        while (Time.time - warningStartedAt < WarningSeconds)
+        while (Time.time - eventStartedAt < TelegraphSeconds)
         {
             if (controller == null || controller.IsGameOver)
             {
@@ -136,93 +121,183 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
             yield return null;
         }
 
-        isWarning = false;
-        isActive = true;
-        activeStartedAt = Time.time;
-
-        var absorptions = 0;
-        var nextAbsorptionAt = Time.time + 2.8f;
-        while (Time.time - activeStartedAt < ActiveSeconds)
+        isEventActive = false;
+        for (var i = 0; i < targetLocks.Count; i++)
         {
-            if (controller == null || controller.IsGameOver)
+            var targetLock = targetLocks[i];
+            if (targetLock.Resolved || !CanAbsorb(targetLock.Target))
             {
-                HideVisuals();
-                yield break;
+                continue;
             }
 
-            if (absorptions < MaxAbsorptionsPerEvent && Time.time >= nextAbsorptionAt)
-            {
-                currentTarget = FindAbsorptionTarget();
-                if (currentTarget != null && CanAbsorb(currentTarget))
-                {
-                    SoundManager.Play(SoundEvent.CosmicAnomalyAbsorb);
-                    currentTarget.TryStartBlackHoleAbsorption(anomalyPosition, AbsorptionDurationSeconds);
-                    absorptions++;
-                    yield return PulseCoreRoutine();
-                }
-
-                nextAbsorptionAt = Time.time + 3.2f;
-            }
-
-            yield return null;
+            targetLock.Target.SetAnomalyTargeted(false);
+            SoundManager.Play(SoundEvent.CosmicAnomalyAbsorb);
+            targetLock.Target.TryStartBlackHoleAbsorption(anomalyPosition, AbsorptionDurationSeconds);
+            yield return PulseCoreRoutine();
         }
 
-        isActive = false;
-        isWarning = false;
-        currentTarget = null;
         HideVisuals();
     }
 
-    private void UpdateAnomalyVisuals()
+    private void PickTargets()
     {
-        var warningProgress = isWarning ? Mathf.Clamp01((Time.time - warningStartedAt) / WarningSeconds) : 1f;
-        var activeProgress = isActive ? Mathf.Clamp01((Time.time - activeStartedAt) / ActiveSeconds) : 0f;
-        var pulse = Mathf.Sin(Time.time * (isWarning ? 7.2f : 5.4f)) * 0.5f + 0.5f;
-        var charge = isWarning ? Mathf.Lerp(0.35f, 1f, warningProgress) : Mathf.Lerp(1f, 0.72f, activeProgress);
+        ClearTargets(true);
+        var candidates = new List<Ball>();
+        foreach (var ball in controller.ActiveBalls)
+        {
+            if (CanTarget(ball))
+            {
+                candidates.Add(ball);
+            }
+        }
+
+        candidates.Sort((a, b) => b.transform.position.y.CompareTo(a.transform.position.y));
+        var count = Mathf.Min(Random.value < 0.42f ? 2 : 1, Mathf.Min(MaxTargetsPerEvent, candidates.Count));
+        for (var i = 0; i < count; i++)
+        {
+            var index = Mathf.Min(i + Random.Range(0, Mathf.Min(3, candidates.Count - i)), candidates.Count - 1);
+            var target = candidates[index];
+            candidates.RemoveAt(index);
+            target.SetAnomalyTargeted(true);
+            targetLocks.Add(CreateTargetLock(target, targetLocks.Count));
+        }
+    }
+
+    private TargetLock CreateTargetLock(Ball target, int index)
+    {
+        var marker = CreateRenderer($"Anomaly Target Marker {index + 1}", CircleSpriteCache.Circle, 26);
+        var beam = CreateRenderer($"Anomaly Target Beam {index + 1}", CircleSpriteCache.Square, 24);
+        var timerBack = CreateRenderer($"Anomaly Timer Back {index + 1}", CircleSpriteCache.Circle, 25);
+        var timerFill = CreateRenderer($"Anomaly Timer Fill {index + 1}", CircleSpriteCache.Circle, 27);
+
+        return new TargetLock
+        {
+            Target = target,
+            InitialPosition = target.transform.position,
+            Marker = marker,
+            Beam = beam,
+            TimerBack = timerBack,
+            TimerFill = timerFill
+        };
+    }
+
+    private void CheckRescueConditions()
+    {
+        for (var i = 0; i < targetLocks.Count; i++)
+        {
+            var targetLock = targetLocks[i];
+            if (targetLock.Resolved)
+            {
+                continue;
+            }
+
+            if (targetLock.Target == null)
+            {
+                targetLock.Resolved = true;
+                continue;
+            }
+
+            var movedDistance = Vector2.Distance(targetLock.InitialPosition, targetLock.Target.transform.position);
+            if (movedDistance >= KnockoutDistance)
+            {
+                ResolveTarget(targetLock.Target, true);
+            }
+        }
+    }
+
+    private void ResolveTarget(Ball ball, bool rescued)
+    {
+        for (var i = 0; i < targetLocks.Count; i++)
+        {
+            var targetLock = targetLocks[i];
+            if (targetLock.Resolved || targetLock.Target != ball)
+            {
+                continue;
+            }
+
+            targetLock.Resolved = true;
+            var position = ball != null ? (Vector2)ball.transform.position : targetLock.InitialPosition;
+            var level = ball != null ? ball.Level : 1;
+            if (ball != null)
+            {
+                ball.SetAnomalyTargeted(false);
+            }
+
+            SetTargetVisuals(targetLock, false);
+            if (rescued)
+            {
+                controller.GrantAnomalyRescueBonus(position, level);
+            }
+        }
+    }
+
+    private void UpdateAnomalyVisuals(float progress)
+    {
+        var pulse = Mathf.Sin(Time.time * 7.2f) * 0.5f + 0.5f;
+        var charge = Mathf.Lerp(0.28f, 1f, AnimationEasing.EaseOutCubic(progress));
 
         outerRing.transform.position = anomalyPosition;
         innerRing.transform.position = anomalyPosition;
         core.transform.position = anomalyPosition;
 
-        outerRing.transform.localScale = Vector3.one * Mathf.Lerp(1.35f, 2.35f, charge + pulse * 0.12f);
-        innerRing.transform.localScale = new Vector3(Mathf.Lerp(0.98f, 1.42f, charge), Mathf.Lerp(0.32f, 0.48f, pulse), 1f);
-        core.transform.localScale = Vector3.one * Mathf.Lerp(0.34f, 0.52f, pulse);
+        outerRing.transform.localScale = Vector3.one * Mathf.Lerp(1.24f, 2.26f, charge + pulse * 0.08f);
+        innerRing.transform.localScale = new Vector3(Mathf.Lerp(0.88f, 1.36f, charge), Mathf.Lerp(0.28f, 0.48f, pulse), 1f);
+        core.transform.localScale = Vector3.one * Mathf.Lerp(0.32f, 0.54f, pulse);
 
-        outerRing.color = new Color(0.52f, 0.18f, 1f, Mathf.Lerp(0.08f, 0.28f, charge));
-        innerRing.color = new Color(0.86f, 0.42f, 1f, Mathf.Lerp(0.2f, 0.56f, charge));
-        core.color = new Color(0.06f, 0.01f, 0.1f, Mathf.Lerp(0.62f, 0.9f, charge));
+        outerRing.color = new Color(0.78f, 0.08f, 0.28f, Mathf.Lerp(0.06f, 0.32f, charge));
+        innerRing.color = new Color(1f, 0.22f, 0.36f, Mathf.Lerp(0.16f, 0.58f, charge));
+        core.color = new Color(0.08f, 0.01f, 0.08f, Mathf.Lerp(0.62f, 0.9f, charge));
     }
 
-    private void UpdateTargetWarning()
+    private void UpdateTargetVisuals(float progress)
     {
-        if (!isActive)
+        var remaining = 1f - progress;
+        var pulse = Mathf.Sin(Time.time * 9.5f) * 0.5f + 0.5f;
+
+        for (var i = 0; i < targetLocks.Count; i++)
         {
-            SetTargetVisuals(false);
+            var targetLock = targetLocks[i];
+            if (targetLock.Resolved || targetLock.Target == null)
+            {
+                SetTargetVisuals(targetLock, false);
+                continue;
+            }
+
+            var targetPosition = (Vector2)targetLock.Target.transform.position;
+            SetTargetVisuals(targetLock, true);
+
+            var diameter = BallConfig.GetDiameter(targetLock.Target.Level);
+            targetLock.Marker.transform.position = targetPosition;
+            targetLock.Marker.transform.localScale = Vector3.one * diameter * Mathf.Lerp(1.16f, 1.34f, pulse);
+            targetLock.Marker.color = new Color(1f, 0.14f, 0.24f, Mathf.Lerp(0.22f, 0.48f, pulse));
+
+            targetLock.TimerBack.transform.position = targetPosition + Vector2.up * (diameter * 0.74f);
+            targetLock.TimerBack.transform.localScale = Vector3.one * diameter * 0.46f;
+            targetLock.TimerBack.color = new Color(0.08f, 0.01f, 0.02f, 0.5f);
+
+            targetLock.TimerFill.transform.position = targetLock.TimerBack.transform.position;
+            targetLock.TimerFill.transform.localScale = Vector3.one * diameter * Mathf.Lerp(0.06f, 0.46f, remaining);
+            targetLock.TimerFill.color = new Color(1f, Mathf.Lerp(0.12f, 0.62f, remaining), 0.12f, 0.72f);
+
+            var direction = targetPosition - anomalyPosition;
+            var midpoint = (anomalyPosition + targetPosition) * 0.5f;
+            targetLock.Beam.transform.position = new Vector3(midpoint.x, midpoint.y, 0f);
+            targetLock.Beam.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+            targetLock.Beam.transform.localScale = new Vector3(direction.magnitude, Mathf.Lerp(0.018f, 0.038f, pulse), 1f);
+            targetLock.Beam.color = new Color(1f, 0.08f, 0.18f, Mathf.Lerp(0.12f, 0.34f, pulse));
+        }
+    }
+
+    private void PlayTickFeedback(float progress)
+    {
+        if (Time.time < nextTickAt)
+        {
             return;
         }
 
-        currentTarget = FindAbsorptionTarget();
-        if (currentTarget == null)
-        {
-            SetTargetVisuals(false);
-            return;
-        }
-
-        var pulse = Mathf.Sin(Time.time * 8.8f) * 0.5f + 0.5f;
-        targetMarker.enabled = true;
-        targetMarker.transform.position = currentTarget.transform.position;
-        targetMarker.transform.localScale = Vector3.one * BallConfig.GetDiameter(currentTarget.Level) * Mathf.Lerp(1.08f, 1.24f, pulse);
-        targetMarker.color = new Color(0.8f, 0.28f, 1f, Mathf.Lerp(0.12f, 0.32f, pulse));
-
-        var start = anomalyPosition;
-        var end = (Vector2)currentTarget.transform.position;
-        var direction = end - start;
-        var midpoint = (start + end) * 0.5f;
-        beamRenderer.enabled = true;
-        beamRenderer.transform.position = new Vector3(midpoint.x, midpoint.y, 0f);
-        beamRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
-        beamRenderer.transform.localScale = new Vector3(direction.magnitude, Mathf.Lerp(0.014f, 0.032f, pulse), 1f);
-        beamRenderer.color = new Color(0.82f, 0.22f, 1f, Mathf.Lerp(0.06f, 0.24f, pulse));
+        nextTickAt = Time.time + Mathf.Lerp(0.52f, 0.16f, progress);
+        SoundManager.Play(SoundEvent.AnomalyTick);
+        Haptics.LightImpact();
     }
 
     private IEnumerator PulseCoreRoutine()
@@ -253,64 +328,14 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
         return new Vector2(x, y);
     }
 
-    private Ball FindAbsorptionTarget()
+    private bool CanTarget(Ball ball)
     {
-        Ball bestTarget = null;
-        var bestScore = float.MinValue;
-        var balls = controller.ActiveBalls;
-
-        for (var i = 0; i < balls.Count; i++)
-        {
-            var ball = balls[i];
-            if (!CanAbsorb(ball))
-            {
-                continue;
-            }
-
-            var distance = Vector2.Distance(anomalyPosition, ball.transform.position);
-            var distanceScore = 1f - Mathf.Clamp01(distance / AbsorptionRadius);
-            var levelPreference = Mathf.InverseLerp(MaxAbsorbLevel, 1f, ball.Level) * 0.22f;
-            var score = distanceScore + levelPreference;
-
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestTarget = ball;
-            }
-        }
-
-        return bestTarget;
-    }
-
-    private bool CanPull(Ball ball)
-    {
-        return ball != null && !ball.IsMerging && ball.Level <= 6;
+        return ball != null && !ball.IsMerging && !ball.IsPreMerging && !ball.IsAnomalyTargeted && ball.Level <= MaxTargetLevel;
     }
 
     private bool CanAbsorb(Ball ball)
     {
-        if (ball == null || ball.IsMerging || ball.IsPreMerging || ball.Level > MaxAbsorbLevel)
-        {
-            return false;
-        }
-
-        var distance = Vector2.Distance(anomalyPosition, ball.transform.position);
-        return distance > MinDistance && distance <= AbsorptionRadius;
-    }
-
-    private static float GetLevelPullFactor(int level)
-    {
-        if (level <= 2)
-        {
-            return 1f;
-        }
-
-        if (level <= 4)
-        {
-            return 0.72f;
-        }
-
-        return 0.36f;
+        return ball != null && !ball.IsMerging && !ball.IsPreMerging && ball.Level <= MaxTargetLevel;
     }
 
     private void CreateVisuals()
@@ -318,8 +343,6 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
         outerRing = CreateRenderer("Cosmic Anomaly Outer Ring", CircleSpriteCache.Circle, 21);
         innerRing = CreateRenderer("Cosmic Anomaly Inner Ring", CircleSpriteCache.Circle, 22);
         core = CreateRenderer("Cosmic Anomaly Core", CircleSpriteCache.Circle, 23);
-        targetMarker = CreateRenderer("Cosmic Anomaly Target Marker", CircleSpriteCache.Circle, 25);
-        beamRenderer = CreateRenderer("Cosmic Anomaly Beam", CircleSpriteCache.Square, 24);
     }
 
     private SpriteRenderer CreateRenderer(string objectName, Sprite sprite, int sortingOrder)
@@ -343,15 +366,51 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
         core.enabled = visible;
     }
 
-    private void SetTargetVisuals(bool visible)
+    private static void SetTargetVisuals(TargetLock targetLock, bool visible)
     {
-        targetMarker.enabled = visible;
-        beamRenderer.enabled = visible;
+        targetLock.Marker.enabled = visible;
+        targetLock.Beam.enabled = visible;
+        targetLock.TimerBack.enabled = visible;
+        targetLock.TimerFill.enabled = visible;
+    }
+
+    private void ClearTargets(bool destroyVisuals)
+    {
+        for (var i = 0; i < targetLocks.Count; i++)
+        {
+            var targetLock = targetLocks[i];
+            if (targetLock.Target != null)
+            {
+                targetLock.Target.SetAnomalyTargeted(false);
+            }
+
+            SetTargetVisuals(targetLock, false);
+            if (destroyVisuals)
+            {
+                Destroy(targetLock.Marker.gameObject);
+                Destroy(targetLock.Beam.gameObject);
+                Destroy(targetLock.TimerBack.gameObject);
+                Destroy(targetLock.TimerFill.gameObject);
+            }
+        }
+
+        targetLocks.Clear();
     }
 
     private void HideVisuals()
     {
         SetVisualsVisible(false);
-        SetTargetVisuals(false);
+        ClearTargets(true);
+    }
+
+    private sealed class TargetLock
+    {
+        public Ball Target;
+        public Vector2 InitialPosition;
+        public SpriteRenderer Marker;
+        public SpriteRenderer Beam;
+        public SpriteRenderer TimerBack;
+        public SpriteRenderer TimerFill;
+        public bool Resolved;
     }
 }

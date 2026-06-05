@@ -19,14 +19,14 @@ public sealed class BallSpawner : MonoBehaviour
     private float rightWall;
     private float spawnY;
     private float guideBottomY;
-    private int nextLevel;
+    private SpawnPayload nextSpawn;
     private bool isDragging;
     private float nextDropTime;
     private float previewGeneratedAt;
     private Ball lastDroppedBall;
     private Vector2 spawnPosition;
 
-    public int NextLevel => nextLevel;
+    public int NextLevel => nextSpawn.Level;
 
     public void Initialize(Camera cameraToUse, GameController gameController, float leftWall, float rightWall, float bottomY, float topY)
     {
@@ -68,7 +68,7 @@ public sealed class BallSpawner : MonoBehaviour
         guideGlowRenderer.sortingOrder = 9;
 
         spawnPosition = new Vector2(0f, spawnY);
-        GenerateNextBall();
+        GenerateNextSpawn();
         UpdatePreview();
     }
 
@@ -132,22 +132,32 @@ public sealed class BallSpawner : MonoBehaviour
     {
         ClearResonance();
         controller.BeginDropWindow();
-        lastDroppedBall = controller.SpawnBall(nextLevel, spawnPosition);
-        lastDroppedBall.PlayDropPop();
+        if (nextSpawn.IsComet)
+        {
+            controller.SpawnComet(spawnPosition);
+            lastDroppedBall = null;
+        }
+        else
+        {
+            lastDroppedBall = controller.SpawnBall(nextSpawn.Level, spawnPosition);
+            lastDroppedBall.PlayDropPop();
+            lastDroppedBall.EnableIntentMagnetism();
+        }
+
         SoundManager.Play(SoundEvent.Drop);
         OnboardingController.Instance?.RegisterDrop();
         nextDropTime = Time.time + MinimumDropInterval;
-        GenerateNextBall();
+        GenerateNextSpawn();
     }
 
-    private void GenerateNextBall()
+    private void GenerateNextSpawn()
     {
-        nextLevel = controller.GetNextSpawnLevel();
+        nextSpawn = controller.GetNextSpawnPayload();
         previewGeneratedAt = Time.time;
         spawnPosition.x = ClampSpawnX(spawnPosition.x);
         if (GameUi.Instance != null)
         {
-            GameUi.Instance.SetNextBall(nextLevel);
+            GameUi.Instance.SetNextSpawn(nextSpawn);
         }
     }
 
@@ -160,13 +170,13 @@ public sealed class BallSpawner : MonoBehaviour
         var breathing = Mathf.Sin(Time.time * (isDragging ? 7.2f : 3.6f)) * 0.5f + 0.5f;
         var breathScale = canDrop ? Mathf.Lerp(1f, isDragging ? 1.055f : 1.025f, breathing) : 0.96f;
         previewRenderer.transform.position = spawnPosition;
-        previewRenderer.transform.localScale = Vector3.one * Ball.GetDiameter(nextLevel) * popIn * breathScale;
-        var color = CircleSpriteCache.GetBallColor(nextLevel);
+        previewRenderer.transform.localScale = Vector3.one * nextSpawn.Diameter * popIn * breathScale;
+        var color = nextSpawn.GetPreviewColor();
         color.a = canDrop ? (isDragging ? 0.82f : 0.58f) : 0.3f;
         previewRenderer.color = color;
 
         previewGlowRenderer.transform.localScale = Vector3.one * Mathf.Lerp(1.18f, isDragging ? 1.42f : 1.28f, breathing) * popIn;
-        var glowColor = CosmicBodyConfig.GetGlowColor(nextLevel);
+        var glowColor = nextSpawn.GetGlowColor();
         glowColor.a = canDrop ? (isDragging ? Mathf.Lerp(0.22f, 0.42f, breathing) : Mathf.Lerp(0.12f, 0.2f, breathing)) : 0.06f;
         previewGlowRenderer.color = glowColor;
 
@@ -191,7 +201,7 @@ public sealed class BallSpawner : MonoBehaviour
 
     private float ClampSpawnX(float worldX)
     {
-        var radius = BallConfig.GetRadius(nextLevel);
+        var radius = nextSpawn.Radius;
         return Mathf.Clamp(worldX, leftWall + radius, rightWall - radius);
     }
 
@@ -220,7 +230,7 @@ public sealed class BallSpawner : MonoBehaviour
 
     private void UpdateResonance()
     {
-        if (!isDragging || !CanDrop())
+        if (!isDragging || !CanDrop() || nextSpawn.IsComet)
         {
             ClearResonance();
             return;
@@ -237,7 +247,7 @@ public sealed class BallSpawner : MonoBehaviour
             }
 
             var xOffset = Mathf.Abs(ball.transform.position.x - spawnPosition.x);
-            var anticipationRange = BallConfig.GetRadius(nextLevel) + ball.Radius + anticipationHorizontalPadding;
+            var anticipationRange = nextSpawn.Radius + ball.Radius + anticipationHorizontalPadding;
             if (xOffset <= anticipationRange && xOffset < closestOffset)
             {
                 closestOffset = xOffset;
@@ -276,6 +286,6 @@ public sealed class BallSpawner : MonoBehaviour
 
     private bool CanResonate(Ball ball)
     {
-        return ball != null && !ball.IsMerging && ball.Level == nextLevel;
+        return ball != null && !ball.IsMerging && ball.Level == nextSpawn.Level;
     }
 }

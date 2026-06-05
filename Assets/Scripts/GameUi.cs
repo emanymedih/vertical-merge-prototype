@@ -16,6 +16,7 @@ public sealed class GameUi : MonoBehaviour
     private Text gameOverCreatedText;
     private Text gameOverScoreText;
     private Text gameOverRecordText;
+    private Text nextBallLabel;
     private Text toastText;
     private Image nextBallImage;
     private Image nextBallGlow;
@@ -24,6 +25,9 @@ public sealed class GameUi : MonoBehaviour
     private Image goalBorder;
     private Image gameOverLargestImage;
     private Image gameOverLargestGlow;
+    private Image gameOverNextGoalImage;
+    private Image gameOverNextGoalGlow;
+    private Text gameOverNextGoalText;
     private Image playAgainButtonImage;
     private Image toastBackground;
     private GameObject gameOverPanel;
@@ -31,6 +35,7 @@ public sealed class GameUi : MonoBehaviour
     private Transform gameOverLargestPreviewRoot;
     private Coroutine toastRoutine;
     private Coroutine playAgainPulseRoutine;
+    private Coroutine nextGoalPulseRoutine;
 
     public static GameUi Instance { get; private set; }
 
@@ -76,6 +81,11 @@ public sealed class GameUi : MonoBehaviour
 
     public void SetNextBall(int level)
     {
+        if (nextBallLabel != null)
+        {
+            nextBallLabel.text = "NEXT";
+        }
+
         nextBallImage.sprite = CircleSpriteCache.Circle;
         nextBallImage.color = CircleSpriteCache.GetBallColor(level);
         nextBallImage.transform.localScale = Vector3.one * Mathf.Lerp(0.84f, 1.18f, Mathf.Clamp01((level - 1) / 4f));
@@ -84,6 +94,27 @@ public sealed class GameUi : MonoBehaviour
         glowColor.a = 0.32f;
         nextBallGlow.color = glowColor;
         nextBallFrame.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0.28f);
+    }
+
+    public void SetNextSpawn(SpawnPayload payload)
+    {
+        if (!payload.IsComet)
+        {
+            SetNextBall(payload.Level);
+            return;
+        }
+
+        nextBallImage.sprite = CircleSpriteCache.Circle;
+        if (nextBallLabel != null)
+        {
+            nextBallLabel.text = "COMET";
+        }
+
+        nextBallImage.color = new Color(0.36f, 0.92f, 1f, 0.96f);
+        nextBallImage.transform.localScale = Vector3.one * 1.08f;
+
+        nextBallGlow.color = new Color(0.82f, 0.98f, 1f, 0.46f);
+        nextBallFrame.color = new Color(0.82f, 0.98f, 1f, 0.46f);
     }
 
     public void ShowDiscoveryToast(int level)
@@ -105,6 +136,7 @@ public sealed class GameUi : MonoBehaviour
 
         gameOverCreatedText.text = $"You created:\n{largestName}";
         BuildResultPreview(largestLevel);
+        BuildNextGoalSilhouette(largestLevel);
         gameOverScoreText.text =
             $"Score: {score}\n" +
             $"Best: {bestScore}\n\n" +
@@ -119,6 +151,12 @@ public sealed class GameUi : MonoBehaviour
         }
 
         playAgainPulseRoutine = StartCoroutine(PlayAgainPulseRoutine());
+        if (nextGoalPulseRoutine != null)
+        {
+            StopCoroutine(nextGoalPulseRoutine);
+        }
+
+        nextGoalPulseRoutine = StartCoroutine(NextGoalPulseRoutine());
     }
 
     private void Create(GameController controller)
@@ -218,9 +256,9 @@ public sealed class GameUi : MonoBehaviour
         panelBorder.color = new Color(0.28f, 0.86f, 1f, 0.18f);
         panelBorder.raycastTarget = false;
 
-        var label = CreateText(panelObject.transform, "Next Label", new Vector2(0f, 58f), TextAnchor.MiddleCenter, 24, new Color(0.78f, 0.9f, 1f, 0.92f));
-        label.text = "NEXT";
-        label.rectTransform.sizeDelta = new Vector2(140f, 34f);
+        nextBallLabel = CreateText(panelObject.transform, "Next Label", new Vector2(0f, 58f), TextAnchor.MiddleCenter, 24, new Color(0.78f, 0.9f, 1f, 0.92f));
+        nextBallLabel.text = "NEXT";
+        nextBallLabel.rectTransform.sizeDelta = new Vector2(140f, 34f);
 
         var previewRoot = new GameObject("Next Ball Preview Root");
         previewRoot.transform.SetParent(panelObject.transform);
@@ -300,6 +338,7 @@ public sealed class GameUi : MonoBehaviour
         title.rectTransform.sizeDelta = new Vector2(660f, 62f);
 
         CreateGameOverLargestPreview(cardObject.transform);
+        CreateGameOverNextGoalSilhouette(cardObject.transform);
 
         gameOverCreatedText = CreateText(cardObject.transform, "Game Over Created", new Vector2(0f, 214f), TextAnchor.MiddleCenter, 50, Color.white);
         gameOverCreatedText.rectTransform.sizeDelta = new Vector2(660f, 148f);
@@ -375,6 +414,42 @@ public sealed class GameUi : MonoBehaviour
         gameOverLargestImage.raycastTarget = false;
     }
 
+    private void CreateGameOverNextGoalSilhouette(Transform parent)
+    {
+        var previewRootObject = new GameObject("Next Goal Silhouette Preview");
+        previewRootObject.transform.SetParent(parent);
+        var previewRootRect = previewRootObject.AddComponent<RectTransform>();
+        previewRootRect.anchorMin = new Vector2(0.5f, 0.5f);
+        previewRootRect.anchorMax = new Vector2(0.5f, 0.5f);
+        previewRootRect.anchoredPosition = new Vector2(184f, 374f);
+        previewRootRect.sizeDelta = new Vector2(150f, 150f);
+
+        var glowObject = new GameObject("Next Goal Silhouette Glow");
+        glowObject.transform.SetParent(previewRootObject.transform);
+        var glowRect = glowObject.AddComponent<RectTransform>();
+        glowRect.anchorMin = new Vector2(0.5f, 0.5f);
+        glowRect.anchorMax = new Vector2(0.5f, 0.5f);
+        glowRect.anchoredPosition = Vector2.zero;
+        glowRect.sizeDelta = new Vector2(132f, 132f);
+        gameOverNextGoalGlow = glowObject.AddComponent<Image>();
+        gameOverNextGoalGlow.sprite = CircleSpriteCache.Circle;
+        gameOverNextGoalGlow.raycastTarget = false;
+
+        var bodyObject = new GameObject("Next Goal Silhouette Body");
+        bodyObject.transform.SetParent(previewRootObject.transform);
+        var bodyRect = bodyObject.AddComponent<RectTransform>();
+        bodyRect.anchorMin = glowRect.anchorMin;
+        bodyRect.anchorMax = glowRect.anchorMax;
+        bodyRect.anchoredPosition = Vector2.zero;
+        bodyRect.sizeDelta = new Vector2(88f, 88f);
+        gameOverNextGoalImage = bodyObject.AddComponent<Image>();
+        gameOverNextGoalImage.sprite = CircleSpriteCache.Circle;
+        gameOverNextGoalImage.raycastTarget = false;
+
+        gameOverNextGoalText = CreateText(parent, "Next Goal Waiting Text", new Vector2(0f, 294f), TextAnchor.MiddleCenter, 27, new Color(0.72f, 0.84f, 1f, 0.9f));
+        gameOverNextGoalText.rectTransform.sizeDelta = new Vector2(660f, 46f);
+    }
+
     private void CreateDiscoveryToast(Transform canvas)
     {
         toastObject = new GameObject("Discovery Toast");
@@ -440,6 +515,21 @@ public sealed class GameUi : MonoBehaviour
                 AddPreviewAccent("Trophy Hot Core", Vector2.zero, new Vector2(28f, 28f), Color.white, 0.86f, CircleSpriteCache.Circle);
                 break;
         }
+    }
+
+    private void BuildNextGoalSilhouette(int largestLevel)
+    {
+        var nextLevel = Mathf.Min(largestLevel + 1, BallConfig.MaxConfiguredLevel);
+        var hasNext = largestLevel < BallConfig.MaxConfiguredLevel;
+        var metadata = CosmicBodyConfig.Get(nextLevel);
+        var glowColor = metadata.GlowColor;
+        glowColor.a = hasNext ? 0.22f : 0.08f;
+
+        gameOverNextGoalGlow.enabled = true;
+        gameOverNextGoalImage.enabled = true;
+        gameOverNextGoalGlow.color = glowColor;
+        gameOverNextGoalImage.color = hasNext ? new Color(0f, 0f, 0f, 0.72f) : new Color(metadata.BaseColor.r, metadata.BaseColor.g, metadata.BaseColor.b, 0.42f);
+        gameOverNextGoalText.text = hasNext ? $"{metadata.ShortName} is waiting..." : "Galaxy Core discovered.";
     }
 
     private void ClearResultPreviewAccents()
@@ -516,6 +606,25 @@ public sealed class GameUi : MonoBehaviour
 
         buttonTransform.localScale = baseScale;
         playAgainPulseRoutine = null;
+    }
+
+    private IEnumerator NextGoalPulseRoutine()
+    {
+        while (gameOverPanel.activeSelf)
+        {
+            var pulse = Mathf.Sin(Time.time * 2.8f) * 0.5f + 0.5f;
+            if (gameOverNextGoalGlow != null)
+            {
+                var color = gameOverNextGoalGlow.color;
+                color.a = Mathf.Lerp(0.12f, 0.32f, pulse);
+                gameOverNextGoalGlow.color = color;
+                gameOverNextGoalGlow.transform.localScale = Vector3.one * Mathf.Lerp(0.96f, 1.08f, pulse);
+            }
+
+            yield return null;
+        }
+
+        nextGoalPulseRoutine = null;
     }
 
     private static string GetGameOverRecordLine(bool newBestScore, bool newBestLargest, int largestLevel, string fallback)

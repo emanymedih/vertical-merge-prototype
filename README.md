@@ -17,6 +17,7 @@ Minimal Unity 2D iOS prototype for a portrait physics merge game.
 - Gravitational pressure field visual pass documented in `Docs/GravitationalPressureFieldPass.md`
 - Snappy core-loop animation pass documented in `Docs/AnimationFeelPass.md`
 - Pre-merge satisfaction and magnetic tension pass documented in `Docs/PreMergeSatisfactionPass.md`
+- Variable reward and anomaly agency pass documented in `Docs/VariableRewardAnomalyAgencyPass.md`
 - Drag horizontally near the top and release to drop
 - Same-level balls merge into the next level
 - Score and best score

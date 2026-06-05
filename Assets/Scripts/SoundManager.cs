@@ -14,7 +14,14 @@ public enum SoundEvent
     BlackHoleWarning,
     BlackHoleAbsorb,
     CosmicAnomalyWarning,
-    CosmicAnomalyAbsorb
+    CosmicAnomalyAbsorb,
+    CriticalMerge,
+    CometSpawn,
+    CometImpact,
+    StressHeartbeat,
+    StressRelief,
+    AnomalyTick,
+    AnomalyEvaded
 }
 
 public sealed class SoundManager : MonoBehaviour

@@ -10,6 +10,11 @@ public sealed class GameController : MonoBehaviour
     private const string DiscoveredLevelKeyPrefix = "MergePrototypeDiscoveredLevel_";
     private const string FirstSessionPacingCompletedKey = "MergePrototypeFirstSessionPacingCompleted";
     private const float PreMergeDelaySeconds = 0.16f;
+    private const float CriticalMergeChance = 0.025f;
+    private const float CometNoMergeSeconds = 30f;
+    private const float CometCooldownSeconds = 60f;
+    private const float CometSpawnChance = 0.1f;
+    private const float CometMinRunSeconds = 45f;
 
     [SerializeField] private float chainWindowSeconds = 1.2f;
     [SerializeField] private float savedMessageCooldownSeconds = 5f;
@@ -47,6 +52,8 @@ public sealed class GameController : MonoBehaviour
     private float dangerPressure;
     private float lastSavedMessageTime = -999f;
     private float runStartedAt;
+    private float lastMergeAt;
+    private float lastCometOfferedAt = -999f;
     private float firstMergeAt = -1f;
     private float firstPlanetAt = -1f;
     private int runMergeCount;
@@ -62,6 +69,9 @@ public sealed class GameController : MonoBehaviour
     public IReadOnlyList<Ball> ActiveBalls => activeBalls;
     public int HighestMergedLevel => highestMergedLevel;
     public int CurrentGoalLevel => Mathf.Max(3, highestMergedLevel + 1);
+    public float DangerPressure => dangerPressure;
+    public float RunSeconds => Mathf.Max(0f, Time.time - runStartedAt);
+    public float SecondsSinceLastMerge => Mathf.Max(0f, Time.time - lastMergeAt);
 
     public int GetNextBallId()
     {
@@ -86,6 +96,7 @@ public sealed class GameController : MonoBehaviour
         IsFirstSessionPacingActive = !PlayerPrefs.HasKey(FirstSessionPacingCompletedKey);
         startingBestScore = BestScore;
         runStartedAt = Time.time;
+        lastMergeAt = runStartedAt;
         UpdateUi();
     }
 
@@ -98,6 +109,17 @@ public sealed class GameController : MonoBehaviour
         var ball = ballObject.AddComponent<Ball>();
         ball.Initialize(level, this);
         return ball;
+    }
+
+    public CometDrop SpawnComet(Vector2 position)
+    {
+        var cometObject = new GameObject("Joker Comet");
+        cometObject.transform.SetParent(ballParent);
+        cometObject.transform.position = position;
+
+        var comet = cometObject.AddComponent<CometDrop>();
+        comet.Initialize(this);
+        return comet;
     }
 
     public void TryStartPreMerge(Ball first, Ball second, Vector2 contactPoint)
@@ -134,16 +156,30 @@ public sealed class GameController : MonoBehaviour
         if (!suppressRunProgress)
         {
             runMergeCount++;
+            lastMergeAt = Time.time;
             if (firstMergeAt < 0f)
             {
                 firstMergeAt = Time.time - runStartedAt;
             }
         }
 
+        var criticalMerge = ShouldTriggerCriticalMerge(first.Level, suppressRunProgress);
+        var firstWasTargeted = first.IsAnomalyTargeted;
+        var secondWasTargeted = second.IsAnomalyTargeted;
+        if (firstWasTargeted)
+        {
+            CosmicAnomalyEventController.Instance?.RegisterTargetMerged(first);
+        }
+
+        if (secondWasTargeted)
+        {
+            CosmicAnomalyEventController.Instance?.RegisterTargetMerged(second);
+        }
+
         first.MarkMerging();
         second.MarkMerging();
 
-        var nextLevel = first.Level + 1;
+        var nextLevel = Mathf.Min(first.Level + (criticalMerge ? 2 : 1), BallConfig.MaxConfiguredLevel);
         var midpoint = ((Vector2)first.transform.position + (Vector2)second.transform.position) * 0.5f;
 
         Destroy(first.gameObject);
@@ -170,6 +206,11 @@ public sealed class GameController : MonoBehaviour
             PlayerPrefs.Save();
         }
 
+        if (criticalMerge && !suppressRunProgress)
+        {
+            MarkLevelDiscoveredSilently(nextLevel - 1);
+        }
+
         var discoveredForFirstTime = !suppressRunProgress && TryShowDiscovery(nextLevel);
 
         var scoreToAdd = GetScoreForLevel(nextLevel);
@@ -186,11 +227,21 @@ public sealed class GameController : MonoBehaviour
         }
 
         var feel = CosmicBodyFeelDatabase.Get(nextLevel);
-        effects.PlayMerge(midpoint, nextLevel, suppressRunProgress ? 0 : scoreToAdd);
-        SoundManager.Play(nextLevel >= 6 ? SoundEvent.HighMergeBoom : SoundEvent.MergePop);
+        if (criticalMerge)
+        {
+            effects.PlayCriticalMerge(midpoint, nextLevel, suppressRunProgress ? 0 : scoreToAdd);
+            SoundManager.Play(SoundEvent.CriticalMerge);
+            Haptics.HeavyImpact();
+        }
+        else
+        {
+            effects.PlayMerge(midpoint, nextLevel, suppressRunProgress ? 0 : scoreToAdd);
+            SoundManager.Play(nextLevel >= 6 ? SoundEvent.HighMergeBoom : SoundEvent.MergePop);
+            Haptics.Play(feel.HapticType);
+        }
+
         SoundManager.PlayMerge(feel);
         pressureFloor?.ApplyMergeRelief(nextLevel);
-        Haptics.Play(feel.HapticType);
         if (!suppressRunProgress)
         {
             OnboardingController.Instance?.RegisterMerge();
@@ -204,6 +255,10 @@ public sealed class GameController : MonoBehaviour
         else if (discoveredForFirstTime && nextLevel >= 6)
         {
             SoundManager.Play(SoundEvent.NewRecord);
+        }
+        else if (criticalMerge && !suppressRunProgress)
+        {
+            gameUi.ShowMomentMessage("Critical Merge!");
         }
 
         if (!suppressRunProgress)
@@ -248,15 +303,73 @@ public sealed class GameController : MonoBehaviour
         UpdateUi();
     }
 
-    public int GetNextSpawnLevel()
+    public SpawnPayload GetNextSpawnPayload()
     {
         if (!IsOpeningDemoActive)
         {
             spawnRequestCount++;
         }
 
-        var runSeconds = Mathf.Max(0f, Time.time - runStartedAt);
-        return BallConfig.PickSpawnLevel(highestMergedLevel, runSeconds, IsFirstSessionPacingActive, spawnRequestCount);
+        if (ShouldOfferComet())
+        {
+            lastCometOfferedAt = Time.time;
+            SoundManager.Play(SoundEvent.CometSpawn);
+            return SpawnPayload.Comet();
+        }
+
+        return SpawnPayload.Normal(PickNextSpawnLevel());
+    }
+
+    public int GetNextSpawnLevel()
+    {
+        return PickNextSpawnLevel();
+    }
+
+    public void ResolveCometImpact(CometDrop comet, Ball target, Vector2 position)
+    {
+        if (IsGameOver || comet == null || target == null || target.IsMerging)
+        {
+            return;
+        }
+
+        var targetLevel = target.Level;
+        CosmicAnomalyEventController.Instance?.RegisterTargetDisrupted(target);
+        target.MarkMerging();
+
+        Destroy(target.gameObject);
+        Destroy(comet.gameObject);
+
+        effects.PlayCometImpact(position, targetLevel);
+        pressureFloor?.ApplyMergeRelief(Mathf.Clamp(targetLevel, 1, 5));
+        SoundManager.Play(SoundEvent.CometImpact);
+        Haptics.HeavyImpact();
+        gameUi.ShowMomentMessage("Comet Save!");
+        UpdateUi();
+    }
+
+    public void GrantAnomalyRescueBonus(Vector2 position, int targetLevel)
+    {
+        if (IsGameOver || IsOpeningDemoActive)
+        {
+            return;
+        }
+
+        var bonusLevel = Mathf.Min(targetLevel + 1, BallConfig.MaxConfiguredLevel);
+        var bonusScore = Mathf.Max(10, Mathf.RoundToInt(GetScoreForLevel(bonusLevel) * 0.5f));
+        Score += bonusScore;
+        if (Score > BestScore)
+        {
+            BestScore = Score;
+            newBestScoreThisRun = true;
+            PlayerPrefs.SetInt(BestScoreKey, BestScore);
+            PlayerPrefs.Save();
+        }
+
+        effects.PlayAnomalyEvaded(position, bonusScore);
+        gameUi.ShowMomentMessage("Evaded!");
+        SoundManager.Play(SoundEvent.AnomalyEvaded);
+        Haptics.SuccessPattern();
+        UpdateUi();
     }
 
     public void TriggerGameOver()
@@ -309,7 +422,7 @@ public sealed class GameController : MonoBehaviour
     }
 #endif
 
-    private static int GetScoreForLevel(int level)
+    public static int GetScoreForLevel(int level)
     {
         if (level < MergeScoreByLevel.Length)
         {
@@ -406,6 +519,23 @@ public sealed class GameController : MonoBehaviour
         gameUi.SetGoalLevel(CurrentGoalLevel, IsLevelDiscovered(CurrentGoalLevel));
     }
 
+    public float GetHighestBallTopY()
+    {
+        var highest = float.MinValue;
+        for (var i = 0; i < activeBalls.Count; i++)
+        {
+            var ball = activeBalls[i];
+            if (ball == null || ball.IsMerging || ball.IsPreMerging)
+            {
+                continue;
+            }
+
+            highest = Mathf.Max(highest, ball.transform.position.y + ball.Radius);
+        }
+
+        return highest == float.MinValue ? -999f : highest;
+    }
+
     private bool TryShowDiscovery(int level)
     {
         if (level < 2)
@@ -423,6 +553,21 @@ public sealed class GameController : MonoBehaviour
         PlayerPrefs.Save();
         gameUi.ShowDiscoveryToast(level);
         return true;
+    }
+
+    private void MarkLevelDiscoveredSilently(int level)
+    {
+        if (level < 2)
+        {
+            return;
+        }
+
+        var key = GetDiscoveredLevelKey(level);
+        if (!PlayerPrefs.HasKey(key))
+        {
+            PlayerPrefs.SetInt(key, 1);
+            PlayerPrefs.Save();
+        }
     }
 
     private string GetMotivationLine()
@@ -537,5 +682,40 @@ public sealed class GameController : MonoBehaviour
 
         lastSavedMessageTime = Time.time;
         gameUi.ShowMomentMessage("Saved!");
+        effects.PlayStressRelief();
+        StressOverlay.Instance?.PlayRelief();
+        SoundManager.Play(SoundEvent.StressRelief);
+        Haptics.LightImpact();
+    }
+
+    private int PickNextSpawnLevel()
+    {
+        return BallConfig.PickSpawnLevel(highestMergedLevel, RunSeconds, IsFirstSessionPacingActive, spawnRequestCount);
+    }
+
+    private bool ShouldTriggerCriticalMerge(int level, bool suppressRunProgress)
+    {
+        if (suppressRunProgress || level + 2 > BallConfig.MaxConfiguredLevel)
+        {
+            return false;
+        }
+
+        return Random.value < CriticalMergeChance;
+    }
+
+    private bool ShouldOfferComet()
+    {
+        if (IsOpeningDemoActive || IsGameOver || RunSeconds < CometMinRunSeconds)
+        {
+            return false;
+        }
+
+        if (Time.time - lastCometOfferedAt < CometCooldownSeconds || SecondsSinceLastMerge < CometNoMergeSeconds)
+        {
+            return false;
+        }
+
+        var pressureRisk = dangerPressure >= 0.35f || (pressureFloor != null && pressureFloor.PressureProgress >= 0.45f);
+        return pressureRisk && Random.value < CometSpawnChance;
     }
 }

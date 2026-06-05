@@ -34,6 +34,7 @@ public sealed class GameBootstrap : MonoBehaviour
         var pressureFloor = pressureFloorObject.AddComponent<PressureFloor>();
         pressureFloor.Initialize(controller, bounds, controller.IsFirstSessionPacingActive);
         controller.SetPressureFloor(pressureFloor);
+        StressOverlay.Build(controller, pressureFloor, bounds.DangerY);
 
         var anomalyObject = new GameObject("Cosmic Anomaly Event Controller");
         var anomalyController = anomalyObject.AddComponent<CosmicAnomalyEventController>();

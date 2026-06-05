@@ -26,6 +26,7 @@ public sealed class Ball : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private SpriteRenderer resonanceGlow;
     private SpriteRenderer popGlow;
+    private IntentMagnetismSensor intentMagnetismSensor;
     private Color baseColor;
     private bool isMerging;
     private bool isPreMerging;
@@ -40,6 +41,7 @@ public sealed class Ball : MonoBehaviour
     public float Mass => body != null ? body.mass : BallConfig.GetMass(Level);
     public bool IsMerging => isMerging;
     public bool IsPreMerging => isPreMerging;
+    public bool IsAnomalyTargeted { get; private set; }
     public Rigidbody2D Body => body;
 
     public void Initialize(int level, GameController gameController)
@@ -149,6 +151,17 @@ public sealed class Ball : MonoBehaviour
     {
         StopAllCoroutines();
         StartCoroutine(MergeBirthRoutine(level, CosmicBodyFeelDatabase.Get(level)));
+    }
+
+    public void EnableIntentMagnetism()
+    {
+        if (isMerging || isPreMerging)
+        {
+            return;
+        }
+
+        EnsureIntentMagnetismSensor();
+        intentMagnetismSensor.Activate();
     }
 
     public void SetResonance(float strength, bool emphasized)
@@ -270,6 +283,11 @@ public sealed class Ball : MonoBehaviour
         resonanceGlow.color = glowColor;
         resonanceGlow.transform.localScale = Vector3.one * Mathf.Lerp(1.08f, 1.2f, pulse);
         resonanceGlow.enabled = true;
+    }
+
+    public void SetAnomalyTargeted(bool targeted)
+    {
+        IsAnomalyTargeted = targeted;
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
@@ -572,5 +590,22 @@ public sealed class Ball : MonoBehaviour
         popGlow.sortingOrder = spriteRenderer.sortingOrder - 2;
         popGlow.color = new Color(1f, 1f, 1f, 0f);
         popGlow.enabled = false;
+    }
+
+    private void EnsureIntentMagnetismSensor()
+    {
+        if (intentMagnetismSensor != null)
+        {
+            return;
+        }
+
+        var sensorObject = new GameObject("Intent Magnetism Sensor");
+        sensorObject.transform.SetParent(transform);
+        sensorObject.transform.localPosition = Vector3.zero;
+        sensorObject.transform.localRotation = Quaternion.identity;
+        sensorObject.transform.localScale = Vector3.one;
+
+        intentMagnetismSensor = sensorObject.AddComponent<IntentMagnetismSensor>();
+        intentMagnetismSensor.Initialize(this, 0.72f);
     }
 }
