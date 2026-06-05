@@ -11,6 +11,7 @@ Minimal Unity 2D iOS prototype for a portrait physics merge game.
 - Procedural cosmic body and arena visual direction documented in `Docs/VisualIdentityPlan.md`
 - Classic arcade readability and manual run-test pass documented in `Docs/ClassicArcadeCorePass.md`
 - Result screen and HUD readability polish documented in `Docs/ReadabilityResultPolishPass.md`
+- Early pacing and Black Hole gravity pass documented in `Docs/EarlyPacingBlackHolePass.md`
 - Drag horizontally near the top and release to drop
 - Same-level balls merge into the next level
 - Score and best score

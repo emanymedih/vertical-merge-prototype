@@ -48,6 +48,7 @@ public sealed class GameController : MonoBehaviour
     private float firstMergeAt = -1f;
     private float firstPlanetAt = -1f;
     private int runMergeCount;
+    private int spawnRequestCount;
 
     public int Score { get; private set; }
     public int BestScore { get; private set; }
@@ -223,7 +224,13 @@ public sealed class GameController : MonoBehaviour
 
     public int GetNextSpawnLevel()
     {
-        return BallConfig.PickSpawnLevel(highestMergedLevel);
+        if (!IsOpeningDemoActive)
+        {
+            spawnRequestCount++;
+        }
+
+        var runSeconds = Mathf.Max(0f, Time.time - runStartedAt);
+        return BallConfig.PickSpawnLevel(highestMergedLevel, runSeconds, IsFirstSessionPacingActive, spawnRequestCount);
     }
 
     public void TriggerGameOver()
@@ -257,6 +264,24 @@ public sealed class GameController : MonoBehaviour
     {
         activeBalls.Remove(ball);
     }
+
+#if UNITY_EDITOR
+    private void Update()
+    {
+        if (IsGameOver)
+        {
+            return;
+        }
+
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.B))
+        {
+            var blackHole = SpawnBall(9, new Vector2(0f, 1.2f));
+            blackHole.PlayPop(1.25f);
+            highestMergedLevel = Mathf.Max(highestMergedLevel, 9);
+            UpdateUi();
+        }
+    }
+#endif
 
     private static int GetScoreForLevel(int level)
     {
@@ -355,6 +380,7 @@ public sealed class GameController : MonoBehaviour
             $"mergeCount={runMergeCount}, " +
             $"firstMerge={FormatTiming(firstMergeAt)}, " +
             $"firstPlanet={FormatTiming(firstPlanetAt)}, " +
+            $"spawnRequests={spawnRequestCount}, " +
             $"firstSessionPacing={IsFirstSessionPacingActive}");
     }
 

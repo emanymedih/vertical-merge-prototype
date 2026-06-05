@@ -143,8 +143,41 @@ public static class BallConfig
         return Mathf.Lerp(1f, 1.12f, t);
     }
 
-    public static int PickSpawnLevel(int highestMergedLevel)
+    public static int PickSpawnLevel(int highestMergedLevel, float runSeconds, bool isFirstSessionPacingActive, int spawnRequestCount)
     {
+        var inEarlyRunWindow = runSeconds <= 90f;
+        var inFirstSessionBoost = isFirstSessionPacingActive && spawnRequestCount <= 12;
+
+        if (inFirstSessionBoost)
+        {
+            if (highestMergedLevel >= 4)
+            {
+                return PickWeightedLevel(new[] { 1, 2, 3, 4 }, new[] { 22, 28, 34, 16 });
+            }
+
+            if (highestMergedLevel >= 3)
+            {
+                return PickWeightedLevel(new[] { 1, 2, 3, 4 }, new[] { 24, 34, 30, 12 });
+            }
+
+            return PickWeightedLevel(new[] { 1, 2, 3 }, new[] { 30, 45, 25 });
+        }
+
+        if (inEarlyRunWindow)
+        {
+            if (highestMergedLevel >= 4)
+            {
+                return PickWeightedLevel(new[] { 1, 2, 3, 4 }, new[] { 32, 32, 26, 10 });
+            }
+
+            if (highestMergedLevel >= 3)
+            {
+                return PickWeightedLevel(new[] { 1, 2, 3 }, new[] { 36, 40, 24 });
+            }
+
+            return PickWeightedLevel(new[] { 1, 2, 3 }, new[] { 42, 42, 16 });
+        }
+
         if (highestMergedLevel >= 5)
         {
             return PickWeightedLevel(new[] { 1, 2, 3, 4 }, new[] { 45, 30, 18, 7 });

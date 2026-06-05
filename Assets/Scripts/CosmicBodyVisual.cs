@@ -35,16 +35,21 @@ public sealed class CosmicBodyVisual : MonoBehaviour
         {
             case CosmicVisualType.Asteroid:
                 AddSpots(metadata.DetailColor, new[] { new Vector2(-0.18f, 0.12f), new Vector2(0.18f, -0.08f), new Vector2(0.02f, -0.24f) }, new[] { 0.18f, 0.14f, 0.1f });
+                AddBand(new Vector2(0.12f, 0.18f), 0.42f, 0.045f, metadata.GlowColor, 0.18f);
                 break;
             case CosmicVisualType.Moon:
                 AddSpots(metadata.DetailColor, new[] { new Vector2(-0.16f, 0.16f), new Vector2(0.18f, 0.02f), new Vector2(-0.02f, -0.22f) }, new[] { 0.16f, 0.11f, 0.13f });
                 break;
             case CosmicVisualType.Planet:
-                AddSpots(metadata.DetailColor, new[] { new Vector2(-0.16f, 0.05f), new Vector2(0.18f, -0.12f) }, new[] { 0.22f, 0.18f });
+                AddGlow(metadata.GlowColor, 0.16f, glowScale);
+                AddSpots(metadata.DetailColor, new[] { new Vector2(-0.16f, 0.05f), new Vector2(0.18f, -0.12f), new Vector2(0.08f, 0.2f) }, new[] { 0.22f, 0.18f, 0.11f });
+                AddBand(new Vector2(0f, -0.06f), 0.72f, 0.055f, Color.Lerp(metadata.DetailColor, Color.white, 0.18f), 0.24f);
                 break;
             case CosmicVisualType.BluePlanet:
-                AddGlow(metadata.GlowColor, 0.2f, glowScale);
+                AddGlow(metadata.GlowColor, 0.24f, glowScale + 0.04f);
                 AddSpots(metadata.DetailColor, new[] { new Vector2(-0.12f, 0.16f), new Vector2(0.2f, -0.08f), new Vector2(-0.24f, -0.16f) }, new[] { 0.19f, 0.15f, 0.1f });
+                AddBand(new Vector2(0f, 0.1f), 0.82f, 0.05f, metadata.DetailColor, 0.3f);
+                AddBand(new Vector2(0f, -0.18f), 0.62f, 0.045f, Color.Lerp(metadata.DetailColor, Color.blue, 0.16f), 0.22f);
                 break;
             case CosmicVisualType.GasGiant:
                 AddBand(new Vector2(0f, 0.17f), 0.78f, 0.08f, metadata.DetailColor, 0.34f);
@@ -69,9 +74,10 @@ public sealed class CosmicBodyVisual : MonoBehaviour
                 AddBand(Vector2.zero, 0.9f, 0.045f, metadata.DetailColor, 0.42f);
                 break;
             case CosmicVisualType.BlackHole:
-                AddGlow(metadata.GlowColor, 0.46f, strongGlowScale + 0.18f);
+                AddGlow(metadata.GlowColor, 0.5f, strongGlowScale + 0.24f);
                 AddRing(metadata.DetailColor, 0.46f, ringScaleX * 1.08f, ringScaleY * 1.18f);
-                AddRing(metadata.GlowColor, 0.86f, ringScaleX, ringScaleY);
+                AddRing(metadata.GlowColor, 0.94f, ringScaleX * 1.08f, ringScaleY);
+                AddRing(Color.Lerp(metadata.GlowColor, Color.white, 0.25f), 0.32f, ringScaleX * 1.42f, ringScaleY * 0.6f);
                 AddCore(metadata.DetailColor, 0.62f, 0.28f, 1);
                 AddCore(Color.black, 0.5f, 0.9f, 3);
                 break;

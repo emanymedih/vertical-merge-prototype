@@ -23,25 +23,25 @@ Use this after the Productization Pass visual and UX changes are in place.
 Console log format:
 
 ```text
-Run complete: duration=MM:SS, score=1234, largest=Planet, mergeCount=12, firstMerge=00:14, firstPlanet=00:48, firstSessionPacing=True
+Run complete: duration=MM:SS, score=1234, largest=Planet, mergeCount=12, spawnRequests=34, firstMerge=00:14, firstPlanet=00:48, firstSessionPacing=True
 ```
 
 Use `firstSessionPacing=True` only for the first fresh-player run. Later runs should usually be evaluated as normal runs.
 
 ## 10-run log
 
-| Run | Time | First Merge | First Planet | Score | Largest | Merge Count | Wanted Replay? | Loss Felt Fair? | Notes |
-| --- | --- | --- | --- | ---: | --- | ---: | --- | --- | --- |
-| 1 |  |  |  |  |  |  |  |  |  |
-| 2 |  |  |  |  |  |  |  |  |  |
-| 3 |  |  |  |  |  |  |  |  |  |
-| 4 |  |  |  |  |  |  |  |  |  |
-| 5 |  |  |  |  |  |  |  |  |  |
-| 6 |  |  |  |  |  |  |  |  |  |
-| 7 |  |  |  |  |  |  |  |  |  |
-| 8 |  |  |  |  |  |  |  |  |  |
-| 9 |  |  |  |  |  |  |  |  |  |
-| 10 |  |  |  |  |  |  |  |  |  |
+| Run | Time | First Merge | First Planet | Score | Largest | Merge Count | Spawn Requests | Wanted Replay? | Loss Felt Fair? | Notes |
+| --- | --- | --- | --- | ---: | --- | ---: | ---: | --- | --- | --- |
+| 1 |  |  |  |  |  |  |  |  |  |  |
+| 2 |  |  |  |  |  |  |  |  |  |  |
+| 3 |  |  |  |  |  |  |  |  |  |  |
+| 4 |  |  |  |  |  |  |  |  |  |  |
+| 5 |  |  |  |  |  |  |  |  |  |  |
+| 6 |  |  |  |  |  |  |  |  |  |  |
+| 7 |  |  |  |  |  |  |  |  |  |  |
+| 8 |  |  |  |  |  |  |  |  |  |  |
+| 9 |  |  |  |  |  |  |  |  |  |  |
+| 10 |  |  |  |  |  |  |  |  |  |  |
 
 ## Tuning rules
 

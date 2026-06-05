@@ -50,10 +50,10 @@ public static class CosmicBodyConfig
 {
     private static readonly CosmicBodyMetadata[] Bodies =
     {
-        new CosmicBodyMetadata(1, "Asteroid", "Asteroid", CosmicVisualType.Asteroid, new Color(0.55f, 0.45f, 0.34f), new Color(0.27f, 0.2f, 0.16f), new Color(0.82f, 0.68f, 0.48f), "Small rocky body"),
+        new CosmicBodyMetadata(1, "Meteor", "Meteor", CosmicVisualType.Asteroid, new Color(0.58f, 0.4f, 0.26f), new Color(0.28f, 0.17f, 0.12f), new Color(0.96f, 0.58f, 0.28f), "Hot rocky body"),
         new CosmicBodyMetadata(2, "Moon", "Moon", CosmicVisualType.Moon, new Color(0.78f, 0.82f, 0.88f), new Color(0.48f, 0.54f, 0.62f), new Color(0.9f, 0.94f, 1f), "Small satellite"),
-        new CosmicBodyMetadata(3, "Small Planet", "Planet", CosmicVisualType.Planet, new Color(0.32f, 0.76f, 0.5f), new Color(0.17f, 0.47f, 0.84f), new Color(0.48f, 0.95f, 0.68f), "Young planet"),
-        new CosmicBodyMetadata(4, "Blue Planet", "Blue Planet", CosmicVisualType.BluePlanet, new Color(0.18f, 0.58f, 1f), new Color(0.78f, 0.95f, 0.95f), new Color(0.4f, 0.82f, 1f), "Water world"),
+        new CosmicBodyMetadata(3, "Verdant Planet", "Verdant Planet", CosmicVisualType.Planet, new Color(0.26f, 0.78f, 0.42f), new Color(0.1f, 0.42f, 0.2f), new Color(0.48f, 0.95f, 0.68f), "Living green world"),
+        new CosmicBodyMetadata(4, "Ocean Planet", "Ocean Planet", CosmicVisualType.BluePlanet, new Color(0.14f, 0.54f, 1f), new Color(0.72f, 0.96f, 1f), new Color(0.4f, 0.82f, 1f), "Water world"),
         new CosmicBodyMetadata(5, "Gas Giant", "Gas Giant", CosmicVisualType.GasGiant, new Color(1f, 0.62f, 0.22f), new Color(0.55f, 0.28f, 0.12f), new Color(1f, 0.84f, 0.46f), "Massive gas planet"),
         new CosmicBodyMetadata(6, "Star", "Star", CosmicVisualType.Star, new Color(1f, 0.9f, 0.34f), new Color(1f, 0.98f, 0.74f), new Color(1f, 0.98f, 0.72f), "Burning star"),
         new CosmicBodyMetadata(7, "Red Giant", "Red Giant", CosmicVisualType.RedGiant, new Color(1f, 0.33f, 0.18f), new Color(1f, 0.73f, 0.32f), new Color(1f, 0.56f, 0.28f), "Expanding star"),

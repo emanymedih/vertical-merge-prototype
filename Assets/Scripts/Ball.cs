@@ -33,6 +33,7 @@ public sealed class Ball : MonoBehaviour
     public int Level { get; private set; }
     public float SpawnedAt { get; private set; }
     public float Radius => transform.lossyScale.x * 0.5f;
+    public float Mass => body != null ? body.mass : BallConfig.GetMass(Level);
     public bool IsMerging => isMerging;
 
     public void Initialize(int level, GameController gameController)
@@ -67,6 +68,10 @@ public sealed class Ball : MonoBehaviour
 
         var bodyVisual = gameObject.AddComponent<CosmicBodyVisual>();
         bodyVisual.Initialize(Level, spriteRenderer);
+        if (Level == 9)
+        {
+            gameObject.AddComponent<BlackHoleGravityField>().Initialize(this, controller);
+        }
 
         controller.RegisterBall(this);
     }
@@ -164,6 +169,16 @@ public sealed class Ball : MonoBehaviour
         {
             resonanceGlow.enabled = false;
         }
+    }
+
+    public void TryApplyExternalForce(Vector2 force)
+    {
+        if (isMerging || body == null)
+        {
+            return;
+        }
+
+        body.AddForce(force, ForceMode2D.Force);
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
