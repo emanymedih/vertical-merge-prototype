@@ -22,6 +22,7 @@ public sealed class BallSpawner : MonoBehaviour
     private int nextLevel;
     private bool isDragging;
     private float nextDropTime;
+    private float previewGeneratedAt;
     private Ball lastDroppedBall;
     private Vector2 spawnPosition;
 
@@ -132,7 +133,7 @@ public sealed class BallSpawner : MonoBehaviour
         ClearResonance();
         controller.BeginDropWindow();
         lastDroppedBall = controller.SpawnBall(nextLevel, spawnPosition);
-        lastDroppedBall.PlayPop();
+        lastDroppedBall.PlayDropPop();
         SoundManager.Play(SoundEvent.Drop);
         OnboardingController.Instance?.RegisterDrop();
         nextDropTime = Time.time + MinimumDropInterval;
@@ -142,6 +143,7 @@ public sealed class BallSpawner : MonoBehaviour
     private void GenerateNextBall()
     {
         nextLevel = controller.GetNextSpawnLevel();
+        previewGeneratedAt = Time.time;
         spawnPosition.x = ClampSpawnX(spawnPosition.x);
         if (GameUi.Instance != null)
         {
@@ -153,24 +155,28 @@ public sealed class BallSpawner : MonoBehaviour
     {
         SetPreviewVisible(true);
         var canDrop = CanDrop();
+        var popInT = Mathf.Clamp01((Time.time - previewGeneratedAt) / 0.18f);
+        var popIn = Mathf.Lerp(0.72f, 1f, AnimationEasing.EaseOutBack(popInT));
+        var breathing = Mathf.Sin(Time.time * (isDragging ? 7.2f : 3.6f)) * 0.5f + 0.5f;
+        var breathScale = canDrop ? Mathf.Lerp(1f, isDragging ? 1.055f : 1.025f, breathing) : 0.96f;
         previewRenderer.transform.position = spawnPosition;
-        previewRenderer.transform.localScale = Vector3.one * Ball.GetDiameter(nextLevel);
+        previewRenderer.transform.localScale = Vector3.one * Ball.GetDiameter(nextLevel) * popIn * breathScale;
         var color = CircleSpriteCache.GetBallColor(nextLevel);
         color.a = canDrop ? (isDragging ? 0.82f : 0.58f) : 0.3f;
         previewRenderer.color = color;
 
-        previewGlowRenderer.transform.localScale = Vector3.one * 1.22f;
+        previewGlowRenderer.transform.localScale = Vector3.one * Mathf.Lerp(1.18f, isDragging ? 1.42f : 1.28f, breathing) * popIn;
         var glowColor = CosmicBodyConfig.GetGlowColor(nextLevel);
-        glowColor.a = canDrop ? (isDragging ? 0.34f : 0.16f) : 0.06f;
+        glowColor.a = canDrop ? (isDragging ? Mathf.Lerp(0.22f, 0.42f, breathing) : Mathf.Lerp(0.12f, 0.2f, breathing)) : 0.06f;
         previewGlowRenderer.color = glowColor;
 
         var guideHeight = Mathf.Max(0.1f, spawnPosition.y - guideBottomY);
         guideRenderer.transform.position = new Vector3(spawnPosition.x, guideBottomY + guideHeight * 0.5f, 0f);
-        guideRenderer.transform.localScale = new Vector3(0.022f, guideHeight, 1f);
-        var guideAlpha = canDrop ? (isDragging ? 0.42f : 0.16f) : 0.06f;
+        guideRenderer.transform.localScale = new Vector3(Mathf.Lerp(0.018f, 0.028f, isDragging ? breathing : 0f), guideHeight, 1f);
+        var guideAlpha = canDrop ? (isDragging ? Mathf.Lerp(0.28f, 0.48f, breathing) : 0.14f) : 0.06f;
         guideRenderer.color = new Color(dropGuideColor.r, dropGuideColor.g, dropGuideColor.b, guideAlpha);
 
-        guideGlowRenderer.color = new Color(dropGuideColor.r, dropGuideColor.g, dropGuideColor.b, guideAlpha * 0.32f);
+        guideGlowRenderer.color = new Color(dropGuideColor.r, dropGuideColor.g, dropGuideColor.b, guideAlpha * (isDragging ? 0.44f : 0.24f));
     }
 
     private bool CanDrop()

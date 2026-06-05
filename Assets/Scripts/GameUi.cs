@@ -605,8 +605,58 @@ public sealed class GameUi : MonoBehaviour
         toastText.text = message;
         toastBackground.color = backgroundColor;
         toastObject.SetActive(true);
-        yield return new WaitForSeconds(duration);
+
+        var toastTransform = toastObject.transform;
+        var textColor = toastText.color;
+        var backgroundStartColor = backgroundColor;
+        toastTransform.localScale = Vector3.one * 0.82f;
+        textColor.a = 0f;
+        toastText.color = textColor;
+        backgroundStartColor.a = 0f;
+        toastBackground.color = backgroundStartColor;
+
+        var elapsed = 0f;
+        const float enterDuration = 0.16f;
+        while (elapsed < enterDuration)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / enterDuration);
+            var eased = AnimationEasing.EaseOutBack(t);
+            toastTransform.localScale = Vector3.LerpUnclamped(Vector3.one * 0.82f, Vector3.one, eased);
+
+            textColor.a = Mathf.Lerp(0f, 1f, AnimationEasing.EaseOutCubic(t));
+            toastText.color = textColor;
+            backgroundStartColor.a = Mathf.Lerp(0f, backgroundColor.a, AnimationEasing.EaseOutCubic(t));
+            toastBackground.color = backgroundStartColor;
+            yield return null;
+        }
+
+        toastTransform.localScale = Vector3.one;
+        textColor.a = 1f;
+        toastText.color = textColor;
+        toastBackground.color = backgroundColor;
+
+        yield return new WaitForSeconds(Mathf.Max(0.05f, duration - enterDuration - 0.18f));
+
+        elapsed = 0f;
+        const float exitDuration = 0.18f;
+        while (elapsed < exitDuration)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / exitDuration);
+            var eased = AnimationEasing.EaseInOutSine(t);
+            toastTransform.localScale = Vector3.Lerp(Vector3.one, Vector3.one * 0.96f, eased);
+
+            textColor.a = Mathf.Lerp(1f, 0f, eased);
+            toastText.color = textColor;
+            backgroundStartColor = toastBackground.color;
+            backgroundStartColor.a = Mathf.Lerp(backgroundColor.a, 0f, eased);
+            toastBackground.color = backgroundStartColor;
+            yield return null;
+        }
+
         toastObject.SetActive(false);
+        toastTransform.localScale = Vector3.one;
         toastRoutine = null;
     }
 }

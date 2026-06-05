@@ -25,6 +25,7 @@ public sealed class Ball : MonoBehaviour
     private CircleCollider2D circleCollider;
     private SpriteRenderer spriteRenderer;
     private SpriteRenderer resonanceGlow;
+    private SpriteRenderer popGlow;
     private Color baseColor;
     private bool isMerging;
     private Vector3 targetScale;
@@ -130,6 +131,18 @@ public sealed class Ball : MonoBehaviour
     {
         StopAllCoroutines();
         StartCoroutine(PopRoutine(intensity));
+    }
+
+    public void PlayDropPop()
+    {
+        StopAllCoroutines();
+        StartCoroutine(DropPopRoutine());
+    }
+
+    public void PlayMergeBirth(int level)
+    {
+        StopAllCoroutines();
+        StartCoroutine(MergeBirthRoutine(level));
     }
 
     public void SetResonance(float strength, bool emphasized)
@@ -304,6 +317,90 @@ public sealed class Ball : MonoBehaviour
         transform.localScale = targetScale;
     }
 
+    private IEnumerator DropPopRoutine()
+    {
+        EnsurePopGlow();
+        popGlow.enabled = true;
+
+        var glowColor = CosmicBodyConfig.GetGlowColor(Level);
+        var elapsed = 0f;
+        const float duration = 0.14f;
+        var squashScale = new Vector3(targetScale.x * 1.08f, targetScale.y * 0.88f, targetScale.z);
+        var stretchScale = new Vector3(targetScale.x * 0.94f, targetScale.y * 1.12f, targetScale.z);
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / duration);
+            if (t < 0.42f)
+            {
+                var localT = AnimationEasing.EaseOutCubic(t / 0.42f);
+                transform.localScale = Vector3.Lerp(targetScale, squashScale, localT);
+            }
+            else
+            {
+                var localT = AnimationEasing.EaseOutBack((t - 0.42f) / 0.58f);
+                transform.localScale = Vector3.Lerp(squashScale, stretchScale, localT);
+            }
+
+            glowColor.a = Mathf.Lerp(0.34f, 0f, t);
+            popGlow.color = glowColor;
+            popGlow.transform.localScale = Vector3.one * Mathf.Lerp(1.12f, 1.42f, t);
+            yield return null;
+        }
+
+        elapsed = 0f;
+        const float settleDuration = 0.08f;
+        var startScale = transform.localScale;
+        while (elapsed < settleDuration)
+        {
+            elapsed += Time.deltaTime;
+            var t = AnimationEasing.EaseOutCubic(elapsed / settleDuration);
+            transform.localScale = Vector3.Lerp(startScale, targetScale, t);
+            yield return null;
+        }
+
+        transform.localScale = targetScale;
+        popGlow.enabled = false;
+    }
+
+    private IEnumerator MergeBirthRoutine(int level)
+    {
+        EnsurePopGlow();
+        popGlow.enabled = true;
+
+        var glowColor = CosmicBodyConfig.GetGlowColor(level);
+        var duration = level >= 8 ? 0.3f : level >= 6 ? 0.26f : 0.22f;
+        var elapsed = 0f;
+        var startScale = targetScale * 0.55f;
+        var overshootScale = targetScale * (level >= 8 ? 1.22f : level >= 6 ? 1.17f : 1.12f);
+        transform.localScale = startScale;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            var t = Mathf.Clamp01(elapsed / duration);
+            if (t < 0.64f)
+            {
+                var localT = AnimationEasing.EaseOutBack(t / 0.64f);
+                transform.localScale = Vector3.LerpUnclamped(startScale, overshootScale, localT);
+            }
+            else
+            {
+                var localT = AnimationEasing.EaseOutCubic((t - 0.64f) / 0.36f);
+                transform.localScale = Vector3.Lerp(overshootScale, targetScale, localT);
+            }
+
+            glowColor.a = Mathf.Lerp(level >= 6 ? 0.42f : 0.28f, 0f, t);
+            popGlow.color = glowColor;
+            popGlow.transform.localScale = Vector3.one * Mathf.Lerp(1.1f, level >= 8 ? 1.72f : 1.46f, t);
+            yield return null;
+        }
+
+        transform.localScale = targetScale;
+        popGlow.enabled = false;
+    }
+
     private IEnumerator BlackHoleAbsorptionRoutine(Vector2 blackHoleCenter, float duration)
     {
         isMerging = true;
@@ -345,5 +442,25 @@ public sealed class Ball : MonoBehaviour
         }
 
         Destroy(gameObject);
+    }
+
+    private void EnsurePopGlow()
+    {
+        if (popGlow != null)
+        {
+            return;
+        }
+
+        var glowObject = new GameObject("Pop Glow");
+        glowObject.transform.SetParent(transform);
+        glowObject.transform.localPosition = Vector3.zero;
+        glowObject.transform.localRotation = Quaternion.identity;
+        glowObject.transform.localScale = Vector3.one * 1.16f;
+
+        popGlow = glowObject.AddComponent<SpriteRenderer>();
+        popGlow.sprite = CircleSpriteCache.Circle;
+        popGlow.sortingOrder = spriteRenderer.sortingOrder - 2;
+        popGlow.color = new Color(1f, 1f, 1f, 0f);
+        popGlow.enabled = false;
     }
 }

@@ -38,32 +38,50 @@ public sealed class GameEffects : MonoBehaviour
 
     private IEnumerator MergeFlashRoutine(Vector2 position, int level)
     {
-        var flash = new GameObject("Merge Pop");
-        flash.transform.position = position;
+        var coreFlash = new GameObject("Merge Core Flash");
+        coreFlash.transform.position = position;
 
-        var renderer = flash.AddComponent<SpriteRenderer>();
-        renderer.sprite = CircleSpriteCache.Circle;
+        var coreRenderer = coreFlash.AddComponent<SpriteRenderer>();
+        coreRenderer.sprite = CircleSpriteCache.Circle;
         var flashColor = Color.Lerp(CircleSpriteCache.GetBallColor(level), CosmicBodyConfig.GetGlowColor(level), level >= highImpactLevel ? 0.45f : 0.2f);
-        renderer.color = flashColor;
-        renderer.sortingOrder = 30;
+        coreRenderer.color = flashColor;
+        coreRenderer.sortingOrder = 30;
+
+        var ring = new GameObject("Merge Shockwave Ring");
+        ring.transform.position = position;
+        var ringRenderer = ring.AddComponent<SpriteRenderer>();
+        ringRenderer.sprite = CircleSpriteCache.Circle;
+        ringRenderer.color = CosmicBodyConfig.GetGlowColor(level);
+        ringRenderer.sortingOrder = 29;
 
         var startScale = Vector3.one * Ball.GetDiameter(level);
-        var endScale = startScale * GetFlashScale(level);
+        var coreEndScale = startScale * GetFlashScale(level);
+        var ringStartScale = startScale * 0.82f;
+        var ringEndScale = startScale * GetRingScale(level);
         var elapsed = 0f;
-        var duration = baseMergeFlashDuration;
+        var duration = level >= peakImpactLevel ? 0.28f : level >= highImpactLevel ? 0.25f : baseMergeFlashDuration;
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
             var t = Mathf.Clamp01(elapsed / duration);
-            flash.transform.localScale = Vector3.Lerp(startScale, endScale, t);
-            var color = renderer.color;
-            color.a = 1f - t;
-            renderer.color = color;
+            var coreT = AnimationEasing.EaseOutCubic(t);
+            var ringT = AnimationEasing.EaseOutCubic(t);
+            coreFlash.transform.localScale = Vector3.Lerp(startScale * 0.54f, coreEndScale, coreT);
+            ring.transform.localScale = Vector3.Lerp(ringStartScale, ringEndScale, ringT);
+
+            var coreColor = coreRenderer.color;
+            coreColor.a = Mathf.Lerp(level >= highImpactLevel ? 0.9f : 0.72f, 0f, coreT);
+            coreRenderer.color = coreColor;
+
+            var ringColor = ringRenderer.color;
+            ringColor.a = Mathf.Lerp(level >= peakImpactLevel ? 0.66f : level >= highImpactLevel ? 0.48f : 0.32f, 0f, t);
+            ringRenderer.color = ringColor;
             yield return null;
         }
 
-        Destroy(flash);
+        Destroy(coreFlash);
+        Destroy(ring);
     }
 
     private IEnumerator FloatingScoreRoutine(Vector2 position, int score, int level)
@@ -86,8 +104,10 @@ public sealed class GameEffects : MonoBehaviour
         renderer.sortingOrder = 50;
 
         var startPosition = scoreObject.transform.position;
-        var endPosition = startPosition + Vector3.up * 0.55f;
-        var startScale = Vector3.one * GetFloatingScoreScale(level);
+        var endPosition = startPosition + Vector3.up * (level >= highImpactLevel ? 0.74f : 0.58f);
+        var baseScale = Vector3.one * GetFloatingScoreScale(level);
+        var startScale = baseScale * 0.55f;
+        var popScale = baseScale * (level >= peakImpactLevel ? 1.34f : level >= highImpactLevel ? 1.22f : 1.14f);
         var elapsed = 0f;
         var duration = floatingScoreDuration;
 
@@ -95,11 +115,18 @@ public sealed class GameEffects : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             var t = Mathf.Clamp01(elapsed / duration);
-            scoreObject.transform.position = Vector3.Lerp(startPosition, endPosition, Mathf.SmoothStep(0f, 1f, t));
-            scoreObject.transform.localScale = Vector3.Lerp(startScale, Vector3.one * 0.92f, t);
+            scoreObject.transform.position = Vector3.Lerp(startPosition, endPosition, AnimationEasing.EaseOutCubic(t));
+            if (t < 0.26f)
+            {
+                scoreObject.transform.localScale = Vector3.LerpUnclamped(startScale, popScale, AnimationEasing.EaseOutBack(t / 0.26f));
+            }
+            else
+            {
+                scoreObject.transform.localScale = Vector3.Lerp(popScale, baseScale * 0.92f, AnimationEasing.EaseInOutSine((t - 0.26f) / 0.74f));
+            }
 
             var color = textMesh.color;
-            color.a = 1f - t;
+            color.a = Mathf.Lerp(1f, 0f, Mathf.SmoothStep(0.62f, 1f, t));
             textMesh.color = color;
             yield return null;
         }
@@ -119,11 +146,11 @@ public sealed class GameEffects : MonoBehaviour
         main.playOnAwake = false;
         main.duration = 0.35f;
         main.loop = false;
-        main.startLifetime = 0.32f;
-        main.startSpeed = 1.7f + level * 0.09f;
-        main.startSize = level >= peakImpactLevel ? 0.13f : level >= highImpactLevel ? 0.11f : 0.08f;
+        main.startLifetime = level >= peakImpactLevel ? 0.42f : level >= highImpactLevel ? 0.36f : 0.3f;
+        main.startSpeed = level >= peakImpactLevel ? 2.35f + level * 0.08f : level >= highImpactLevel ? 2f + level * 0.08f : 1.62f + level * 0.08f;
+        main.startSize = level >= peakImpactLevel ? 0.15f : level >= highImpactLevel ? 0.12f : 0.075f;
         main.startColor = Color.Lerp(CircleSpriteCache.GetBallColor(level), CosmicBodyConfig.GetGlowColor(level), 0.35f);
-        main.maxParticles = level >= peakImpactLevel ? 36 : level >= highImpactLevel ? 30 : 22;
+        main.maxParticles = level >= peakImpactLevel ? 42 : level >= highImpactLevel ? 34 : 20;
 
         var emission = particles.emission;
         emission.enabled = false;
@@ -133,7 +160,7 @@ public sealed class GameEffects : MonoBehaviour
         shape.shapeType = ParticleSystemShapeType.Circle;
         shape.radius = 0.25f;
 
-        var maxBurst = level >= peakImpactLevel ? 36 : level >= highImpactLevel ? 30 : 22;
+        var maxBurst = level >= peakImpactLevel ? 42 : level >= highImpactLevel ? 34 : 20;
         particles.Emit(Mathf.Clamp(8 + level * 2, 10, maxBurst));
         Destroy(particleObject, 1f);
     }
@@ -146,6 +173,16 @@ public sealed class GameEffects : MonoBehaviour
         }
 
         return level >= highImpactLevel ? 1.82f : 1.5f;
+    }
+
+    private float GetRingScale(int level)
+    {
+        if (level >= peakImpactLevel)
+        {
+            return 2.85f;
+        }
+
+        return level >= highImpactLevel ? 2.35f : 1.86f;
     }
 
     private int GetFloatingScoreFontSize(int level)

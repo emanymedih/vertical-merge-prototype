@@ -126,7 +126,7 @@ public sealed class GameController : MonoBehaviour
         Destroy(second.gameObject);
 
         var mergedBall = SpawnBall(nextLevel, midpoint);
-        mergedBall.PlayPop(GetMergePopIntensity(nextLevel));
+        mergedBall.PlayMergeBirth(nextLevel);
 
         if (nextLevel > highestMergedLevel)
         {
@@ -359,16 +359,6 @@ public sealed class GameController : MonoBehaviour
     private static bool IsLevelDiscovered(int level)
     {
         return level <= 1 || PlayerPrefs.HasKey(GetDiscoveredLevelKey(level));
-    }
-
-    private static float GetMergePopIntensity(int level)
-    {
-        if (level >= 8)
-        {
-            return 1.34f;
-        }
-
-        return level >= 6 ? 1.22f : 1f;
     }
 
     private void LogRunSummary()
