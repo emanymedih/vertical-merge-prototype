@@ -13,6 +13,7 @@ Minimal Unity 2D iOS prototype for a portrait physics merge game.
 - Result screen and HUD readability polish documented in `Docs/ReadabilityResultPolishPass.md`
 - Early pacing and Black Hole gravity pass documented in `Docs/EarlyPacingBlackHolePass.md`
 - Black Hole event horizon release pass documented in `Docs/BlackHoleEventHorizonPass.md`
+- Mid-session Cosmic Anomaly arena event documented in `Docs/CosmicAnomalyEventPass.md`
 - Drag horizontally near the top and release to drop
 - Same-level balls merge into the next level
 - Score and best score

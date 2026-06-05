@@ -12,7 +12,9 @@ public enum SoundEvent
     NewRecord,
     ButtonClick,
     BlackHoleWarning,
-    BlackHoleAbsorb
+    BlackHoleAbsorb,
+    CosmicAnomalyWarning,
+    CosmicAnomalyAbsorb
 }
 
 public sealed class SoundManager : MonoBehaviour
