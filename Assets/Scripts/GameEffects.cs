@@ -63,6 +63,12 @@ public sealed class GameEffects : MonoBehaviour
         cameraShake?.Shake(0.08f, 0.035f);
     }
 
+    public void PlayAnomalyConsumed(Vector2 position)
+    {
+        StartCoroutine(SpecialPulseRoutine(position, 4, new Color(0.16f, 0.02f, 0.22f), new Color(0.72f, 0.28f, 1f), 0.24f, 1.7f));
+        PlayConsumeParticles(position);
+    }
+
     public void PlayStressRelief()
     {
         StartCoroutine(FloatingMessageRoutine(new Vector2(0f, 1.1f), "Saved!", new Color(0.72f, 1f, 1f), 0.68f));
@@ -302,6 +308,40 @@ public sealed class GameEffects : MonoBehaviour
 
         particles.Emit(28);
         StartCoroutine(ReturnParticlesRoutine(particles, 0.68f));
+    }
+
+    private void PlayConsumeParticles(Vector2 position)
+    {
+        var particles = GetParticles();
+        particles.gameObject.transform.position = position;
+        particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        var main = particles.main;
+        main.playOnAwake = false;
+        main.duration = 0.28f;
+        main.loop = false;
+        main.startLifetime = 0.46f;
+        main.startSpeed = 1.55f;
+        main.startSize = 0.12f;
+        main.startColor = new Color(0.62f, 0.22f, 1f, 0.94f);
+        main.maxParticles = 36;
+
+        var emission = particles.emission;
+        emission.enabled = false;
+
+        var velocityLimit = particles.limitVelocityOverLifetime;
+        velocityLimit.enabled = true;
+        velocityLimit.limit = 1.8f;
+        velocityLimit.dampen = 0.72f;
+        velocityLimit.drag = 2.2f;
+
+        var shape = particles.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 0.12f;
+
+        particles.Emit(30);
+        StartCoroutine(ReturnParticlesRoutine(particles, 0.82f));
     }
 
     private float GetFlashScale(int level)

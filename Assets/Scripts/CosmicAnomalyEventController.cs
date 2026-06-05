@@ -8,6 +8,7 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
     private const float FirstEventMaxDelay = 75f;
     private const float CooldownMinSeconds = 48f;
     private const float CooldownMaxSeconds = 66f;
+    private const float TargetScanRadius = 5f;
     private const float TelegraphSeconds = 3.5f;
     private const float AbsorptionDurationSeconds = 0.68f;
     private const float KnockoutDistance = 2f;
@@ -16,6 +17,7 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
 
     private readonly List<TargetLock> targetLocks = new List<TargetLock>();
     private GameController controller;
+    private GameEffects effects;
     private ContainerBounds bounds;
     private Vector2 anomalyPosition;
     private SpriteRenderer outerRing;
@@ -27,10 +29,11 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
 
     public static CosmicAnomalyEventController Instance { get; private set; }
 
-    public void Initialize(GameController gameController, ContainerBounds containerBounds)
+    public void Initialize(GameController gameController, ContainerBounds containerBounds, GameEffects gameEffects)
     {
         Instance = this;
         controller = gameController;
+        effects = gameEffects;
         bounds = containerBounds;
         CreateVisuals();
         HideVisuals();
@@ -133,6 +136,7 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
             targetLock.Target.SetAnomalyTargeted(false);
             SoundManager.Play(SoundEvent.CosmicAnomalyAbsorb);
             targetLock.Target.TryStartBlackHoleAbsorption(anomalyPosition, AbsorptionDurationSeconds);
+            effects?.PlayAnomalyConsumed(anomalyPosition);
             yield return PulseCoreRoutine();
         }
 
@@ -145,7 +149,7 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
         var candidates = new List<Ball>();
         foreach (var ball in controller.ActiveBalls)
         {
-            if (CanTarget(ball))
+            if (CanTarget(ball) && Vector2.Distance(anomalyPosition, ball.transform.position) <= TargetScanRadius)
             {
                 candidates.Add(ball);
             }
@@ -166,7 +170,8 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
     private TargetLock CreateTargetLock(Ball target, int index)
     {
         var marker = CreateRenderer($"Anomaly Target Marker {index + 1}", CircleSpriteCache.Circle, 26);
-        var beam = CreateRenderer($"Anomaly Target Beam {index + 1}", CircleSpriteCache.Square, 24);
+        var beam = CreateBeamRenderer($"Anomaly Target Beam {index + 1}", 24);
+        beam.transform.SetParent(transform);
         var timerBack = CreateRenderer($"Anomaly Timer Back {index + 1}", CircleSpriteCache.Circle, 25);
         var timerFill = CreateRenderer($"Anomaly Timer Fill {index + 1}", CircleSpriteCache.Circle, 27);
 
@@ -279,12 +284,14 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
             targetLock.TimerFill.transform.localScale = Vector3.one * diameter * Mathf.Lerp(0.06f, 0.46f, remaining);
             targetLock.TimerFill.color = new Color(1f, Mathf.Lerp(0.12f, 0.62f, remaining), 0.12f, 0.72f);
 
-            var direction = targetPosition - anomalyPosition;
-            var midpoint = (anomalyPosition + targetPosition) * 0.5f;
-            targetLock.Beam.transform.position = new Vector3(midpoint.x, midpoint.y, 0f);
-            targetLock.Beam.transform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
-            targetLock.Beam.transform.localScale = new Vector3(direction.magnitude, Mathf.Lerp(0.018f, 0.038f, pulse), 1f);
-            targetLock.Beam.color = new Color(1f, 0.08f, 0.18f, Mathf.Lerp(0.12f, 0.34f, pulse));
+            var beamColor = new Color(1f, 0.08f, 0.18f, Mathf.Lerp(0.18f, 0.42f, pulse));
+            targetLock.Beam.positionCount = 2;
+            targetLock.Beam.SetPosition(0, new Vector3(anomalyPosition.x, anomalyPosition.y, -0.15f));
+            targetLock.Beam.SetPosition(1, new Vector3(targetPosition.x, targetPosition.y, -0.15f));
+            targetLock.Beam.startWidth = Mathf.Lerp(0.018f, 0.042f, pulse);
+            targetLock.Beam.endWidth = Mathf.Lerp(0.034f, 0.072f, pulse);
+            targetLock.Beam.startColor = new Color(beamColor.r, beamColor.g, beamColor.b, beamColor.a * 0.56f);
+            targetLock.Beam.endColor = beamColor;
         }
     }
 
@@ -359,6 +366,23 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
         return renderer;
     }
 
+    private static LineRenderer CreateBeamRenderer(string objectName, int sortingOrder)
+    {
+        var visual = new GameObject(objectName);
+        var renderer = visual.AddComponent<LineRenderer>();
+        visual.transform.position = Vector3.zero;
+        visual.transform.rotation = Quaternion.identity;
+
+        renderer.positionCount = 2;
+        renderer.useWorldSpace = true;
+        renderer.numCapVertices = 4;
+        renderer.numCornerVertices = 2;
+        renderer.sortingOrder = sortingOrder;
+        renderer.material = new Material(Shader.Find("Sprites/Default"));
+        renderer.enabled = false;
+        return renderer;
+    }
+
     private void SetVisualsVisible(bool visible)
     {
         outerRing.enabled = visible;
@@ -408,7 +432,7 @@ public sealed class CosmicAnomalyEventController : MonoBehaviour
         public Ball Target;
         public Vector2 InitialPosition;
         public SpriteRenderer Marker;
-        public SpriteRenderer Beam;
+        public LineRenderer Beam;
         public SpriteRenderer TimerBack;
         public SpriteRenderer TimerFill;
         public bool Resolved;

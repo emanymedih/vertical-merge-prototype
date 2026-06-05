@@ -12,7 +12,7 @@ Add controlled mid-run events that make a six-minute session feel less flat: rar
 - Run Complete: result card now includes a pulsing silhouette of the next goal, for example `Galaxy Core is waiting...`.
 - Stress overlay: screen edges react to danger pressure, high stack position, and pressure floor progress; `Saved!` resets the stress feedback.
 - Intent magnetism: a freshly dropped normal body gets subtle horizontal assistance toward same-level bodies for 1.2 seconds.
-- Anomaly agency: Cosmic Anomaly locks 1-2 targets from L1-L4, telegraphs for 3.5 seconds, and lets the player rescue targets by knock-out movement or merge escape.
+- Anomaly agency: Cosmic Anomaly scans within a 5 world-unit radius, locks 1-2 targets from L1-L4, telegraphs for 3.5 seconds with a real `LineRenderer` beam, and lets the player rescue targets by knock-out movement or merge escape.
 
 ## Design Defaults
 
