@@ -24,10 +24,10 @@ public static class CosmicArenaVisuals
         CreatePanel(parent, "Outer Deep Space Backdrop", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(0.004f, 0.008f, 0.02f, 1f), -48);
         CreatePanel(parent, "Outer Space Atmosphere", Vector2.zero, new Vector2(visibleWidth + 1.8f, halfHeight * 2f + 1.4f), new Color(1f, 1f, 1f, 0.24f), -47, RuntimeMaterials.NebulaBackdrop);
 
-        if (CreateWallpaper(parent, chamberCenter, bounds.Width + 0.16f, chamberHeight + 0.16f))
+        if (CreateWallpaper(parent, chamberCenter, bounds.Width, chamberHeight))
         {
-            CreatePanel(parent, "Wallpaper Depth Fade", chamberCenter, new Vector2(bounds.Width + 0.2f, chamberHeight + 0.2f), new Color(0f, 0.01f, 0.025f, 0.16f), -34);
-            CreatePanel(parent, "Atmospheric Shader Haze", chamberCenter, new Vector2(bounds.Width + 0.28f, chamberHeight + 0.28f), new Color(1f, 1f, 1f, 0.34f), -33, RuntimeMaterials.NebulaBackdrop);
+            CreatePanel(parent, "Wallpaper Depth Fade", chamberCenter, new Vector2(bounds.Width, chamberHeight), new Color(0f, 0.01f, 0.025f, 0.16f), -34);
+            CreatePanel(parent, "Atmospheric Shader Haze", chamberCenter, new Vector2(bounds.Width, chamberHeight), new Color(1f, 1f, 1f, 0.3f), -33, RuntimeMaterials.NebulaBackdrop);
             return;
         }
 
@@ -88,18 +88,18 @@ public static class CosmicArenaVisuals
         var cyanGlow = new Color(0.24f, 0.86f, 1f, 0.38f);
         var wallCore = new Color(0.025f, 0.045f, 0.07f, 0.9f);
 
-        CreatePanel(parent, "Left Chamber Wall Core", new Vector2(bounds.Left - 0.12f, centerY), new Vector2(0.24f, height + 0.1f), wallCore, 1);
-        CreatePanel(parent, "Right Chamber Wall Core", new Vector2(bounds.Right + 0.12f, centerY), new Vector2(0.24f, height + 0.1f), wallCore, 1);
-        CreatePanel(parent, "Left Outer Energy Bloom", new Vector2(bounds.Left - 0.06f, centerY), new Vector2(0.32f, height), new Color(0.08f, 0.58f, 1f, 0.11f), 2, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.58f, 1f, 0.32f), 0.56f, 1.2f));
-        CreatePanel(parent, "Right Outer Energy Bloom", new Vector2(bounds.Right + 0.06f, centerY), new Vector2(0.32f, height), new Color(0.08f, 0.58f, 1f, 0.11f), 2, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.58f, 1f, 0.32f), 0.56f, 1.2f));
-        CreatePanel(parent, "Left Inner Energy Boundary", new Vector2(bounds.Left + 0.018f, centerY), new Vector2(0.036f, height), cyanGlow, 5, RuntimeMaterials.CreateEnergyBeam(cyanGlow, 1.15f, 1.6f));
-        CreatePanel(parent, "Right Inner Energy Boundary", new Vector2(bounds.Right - 0.018f, centerY), new Vector2(0.036f, height), cyanGlow, 5, RuntimeMaterials.CreateEnergyBeam(cyanGlow, 1.15f, 1.6f));
-        CreatePanel(parent, "Left Hot Boundary Core", new Vector2(bounds.Left + 0.034f, centerY), new Vector2(0.012f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.78f, 0.98f, 1f, 0.72f), 1.4f, 2.4f));
-        CreatePanel(parent, "Right Hot Boundary Core", new Vector2(bounds.Right - 0.034f, centerY), new Vector2(0.012f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.78f, 0.98f, 1f, 0.72f), 1.4f, 2.4f));
+        CreatePanel(parent, "Left Chamber Wall Core", new Vector2(bounds.Left, centerY), new Vector2(0.09f, height), wallCore, 1);
+        CreatePanel(parent, "Right Chamber Wall Core", new Vector2(bounds.Right, centerY), new Vector2(0.09f, height), wallCore, 1);
+        CreatePanel(parent, "Left Outer Energy Bloom", new Vector2(bounds.Left + 0.04f, centerY), new Vector2(0.14f, height), new Color(0.08f, 0.58f, 1f, 0.09f), 2, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.58f, 1f, 0.28f), 0.44f, 1.2f));
+        CreatePanel(parent, "Right Outer Energy Bloom", new Vector2(bounds.Right - 0.04f, centerY), new Vector2(0.14f, height), new Color(0.08f, 0.58f, 1f, 0.09f), 2, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.58f, 1f, 0.28f), 0.44f, 1.2f));
+        CreatePanel(parent, "Left Inner Energy Boundary", new Vector2(bounds.Left + 0.045f, centerY), new Vector2(0.026f, height), cyanGlow, 5, RuntimeMaterials.CreateEnergyBeam(cyanGlow, 1.15f, 1.6f));
+        CreatePanel(parent, "Right Inner Energy Boundary", new Vector2(bounds.Right - 0.045f, centerY), new Vector2(0.026f, height), cyanGlow, 5, RuntimeMaterials.CreateEnergyBeam(cyanGlow, 1.15f, 1.6f));
+        CreatePanel(parent, "Left Hot Boundary Core", new Vector2(bounds.Left + 0.064f, centerY), new Vector2(0.01f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.78f, 0.98f, 1f, 0.72f), 1.4f, 2.4f));
+        CreatePanel(parent, "Right Hot Boundary Core", new Vector2(bounds.Right - 0.064f, centerY), new Vector2(0.01f, height), new Color(0.78f, 0.98f, 1f, 0.58f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.78f, 0.98f, 1f, 0.72f), 1.4f, 2.4f));
 
-        CreatePanel(parent, "Gravity Platform Body", new Vector2(0f, bounds.Bottom - 0.12f), new Vector2(bounds.Width + 0.5f, 0.24f), new Color(0.025f, 0.075f, 0.105f, 0.94f), 1);
-        CreatePanel(parent, "Gravity Platform Bloom", new Vector2(0f, bounds.Bottom + 0.02f), new Vector2(bounds.Width + 0.5f, 0.16f), new Color(0.08f, 0.66f, 1f, 0.16f), 3, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.66f, 1f, 0.3f), 0.8f, 1.3f));
-        CreatePanel(parent, "Gravity Platform Hot Edge", new Vector2(0f, bounds.Bottom + 0.055f), new Vector2(bounds.Width + 0.32f, 0.042f), new Color(0.48f, 0.94f, 1f, 0.62f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.48f, 0.94f, 1f, 0.76f), 1.2f, 2.1f));
+        CreatePanel(parent, "Gravity Platform Body", new Vector2(0f, bounds.Bottom - 0.06f), new Vector2(bounds.Width, 0.12f), new Color(0.025f, 0.075f, 0.105f, 0.94f), 1);
+        CreatePanel(parent, "Gravity Platform Bloom", new Vector2(0f, bounds.Bottom + 0.025f), new Vector2(bounds.Width, 0.11f), new Color(0.08f, 0.66f, 1f, 0.13f), 3, RuntimeMaterials.CreateAtmosphereGlow(new Color(0.08f, 0.66f, 1f, 0.24f), 0.62f, 1.3f));
+        CreatePanel(parent, "Gravity Platform Hot Edge", new Vector2(0f, bounds.Bottom + 0.058f), new Vector2(bounds.Width, 0.032f), new Color(0.48f, 0.94f, 1f, 0.62f), 6, RuntimeMaterials.CreateEnergyBeam(new Color(0.48f, 0.94f, 1f, 0.76f), 1.2f, 2.1f));
         CreatePanel(parent, "Chamber Interior Depth", new Vector2(0f, centerY), new Vector2(bounds.Width, height), new Color(0f, 0f, 0f, 0.13f), -1);
         CreatePanel(parent, "Top Field Fade", new Vector2(0f, bounds.Top - 0.28f), new Vector2(bounds.Width + 0.4f, 0.56f), new Color(0.04f, 0.09f, 0.14f, 0.22f), 0);
     }
