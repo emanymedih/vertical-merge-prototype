@@ -29,6 +29,7 @@ public sealed class CosmicBodyVisual : MonoBehaviour
 
     private void BuildVisual(CosmicBodyMetadata metadata)
     {
+        AddGradeAura(metadata);
         AddReadabilityRim(metadata);
 
         switch (metadata.VisualType)
@@ -90,11 +91,22 @@ public sealed class CosmicBodyVisual : MonoBehaviour
         }
     }
 
+    private void AddGradeAura(CosmicBodyMetadata metadata)
+    {
+        var gradeT = Mathf.Clamp01((metadata.Level - 1f) / (BallConfig.MaxConfiguredLevel - 1f));
+        var glowColor = Color.Lerp(metadata.GlowColor, Color.white, metadata.Level >= 8 ? 0.14f : 0.04f);
+        var auraAlpha = Mathf.Lerp(0.055f, 0.34f, gradeT);
+        var auraScale = Mathf.Lerp(1.12f, 1.54f, gradeT);
+        var intensity = Mathf.Lerp(0.42f, 1.45f, gradeT);
+        AddCircle("Grade Aura", Vector2.zero, auraScale, WithAlpha(glowColor, auraAlpha), mainRenderer.sortingOrder - 4, true, intensity, Mathf.Lerp(0.65f, 2.25f, gradeT));
+    }
+
     private void AddReadabilityRim(CosmicBodyMetadata metadata)
     {
         var rimColor = Color.Lerp(metadata.GlowColor, Color.white, metadata.Level >= 8 ? 0.18f : 0.08f);
         var alpha = metadata.Level >= 6 ? 0.32f : 0.22f;
-        AddCircle("Readability Rim", Vector2.zero, 1.045f, WithAlpha(rimColor, alpha), mainRenderer.sortingOrder - 1, true);
+        var gradeT = Mathf.Clamp01((metadata.Level - 1f) / (BallConfig.MaxConfiguredLevel - 1f));
+        AddCircle("Readability Rim", Vector2.zero, 1.045f, WithAlpha(rimColor, alpha), mainRenderer.sortingOrder - 1, true, Mathf.Lerp(0.7f, 1.18f, gradeT), 1.1f + gradeT);
     }
 
     private void AddSpots(Color color, Vector2[] positions, float[] sizes)
@@ -127,12 +139,12 @@ public sealed class CosmicBodyVisual : MonoBehaviour
         AddShape("Atmosphere Band", position, new Vector2(width, height), WithAlpha(color, alpha), mainRenderer.sortingOrder + 1, CircleSpriteCache.Square);
     }
 
-    private void AddCircle(string name, Vector2 position, float scale, Color color, int sortingOrder, bool useGlowMaterial = false)
+    private void AddCircle(string name, Vector2 position, float scale, Color color, int sortingOrder, bool useGlowMaterial = false, float glowIntensity = 0.88f, float pulseSpeed = -1f)
     {
-        AddShape(name, position, new Vector2(scale, scale), color, sortingOrder, CircleSpriteCache.Circle, useGlowMaterial);
+        AddShape(name, position, new Vector2(scale, scale), color, sortingOrder, CircleSpriteCache.Circle, useGlowMaterial, glowIntensity, pulseSpeed);
     }
 
-    private void AddShape(string name, Vector2 position, Vector2 scale, Color color, int sortingOrder, Sprite sprite, bool useGlowMaterial = false)
+    private void AddShape(string name, Vector2 position, Vector2 scale, Color color, int sortingOrder, Sprite sprite, bool useGlowMaterial = false, float glowIntensity = 0.88f, float pulseSpeed = -1f)
     {
         var shape = new GameObject(name);
         shape.transform.SetParent(visualRoot);
@@ -146,7 +158,7 @@ public sealed class CosmicBodyVisual : MonoBehaviour
         renderer.sortingOrder = sortingOrder;
         if (useGlowMaterial)
         {
-            var material = RuntimeMaterials.CreateAtmosphereGlow(color, 0.88f, 1.1f + GetPulseOffset(sortingOrder));
+            var material = RuntimeMaterials.CreateAtmosphereGlow(color, glowIntensity, pulseSpeed > 0f ? pulseSpeed : 1.1f + GetPulseOffset(sortingOrder));
             if (material != null)
             {
                 renderer.material = material;
