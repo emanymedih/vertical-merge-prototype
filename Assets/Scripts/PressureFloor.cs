@@ -11,6 +11,7 @@ public sealed class PressureFloor : MonoBehaviour
     private const float StandardMaxRiseSpeed = 0.07f;
     private const float RiseAcceleration = 0.00004f;
     private const float SurfaceThickness = 0.16f;
+    private const int CompressionWaveCount = 4;
 
     private GameController controller;
     private Rigidbody2D body;
@@ -19,6 +20,8 @@ public sealed class PressureFloor : MonoBehaviour
     private SpriteRenderer fillRenderer;
     private SpriteRenderer lowerFillRenderer;
     private SpriteRenderer topGlowRenderer;
+    private SpriteRenderer horizonCoreRenderer;
+    private SpriteRenderer[] compressionWaveRenderers;
     private float startY;
     private float currentY;
     private float bottomY;
@@ -52,26 +55,19 @@ public sealed class PressureFloor : MonoBehaviour
 
         surfaceRenderer = GetComponent<SpriteRenderer>();
         surfaceRenderer.sprite = CircleSpriteCache.Square;
-        surfaceRenderer.color = new Color(0.24f, 0.76f, 1f, 0.72f);
+        surfaceRenderer.color = new Color(0.58f, 0.32f, 1f, 0.44f);
         surfaceRenderer.sortingOrder = 4;
 
-        var fill = new GameObject("Pressure Fill");
-        fillRenderer = fill.AddComponent<SpriteRenderer>();
-        fillRenderer.sprite = CircleSpriteCache.Square;
-        fillRenderer.color = new Color(0.12f, 0.55f, 0.95f, 0.12f);
-        fillRenderer.sortingOrder = 1;
+        fillRenderer = CreateVisualLayer("Gravity Compression Haze", 1, new Color(0.22f, 0.12f, 0.55f, 0.08f));
+        lowerFillRenderer = CreateVisualLayer("Deep Gravity Pressure Field", 1, new Color(0.04f, 0.02f, 0.16f, 0.18f));
+        topGlowRenderer = CreateVisualLayer("Compression Wave Front Glow", 5, new Color(0.52f, 0.9f, 1f, 0.3f));
+        horizonCoreRenderer = CreateVisualLayer("Compression Wave Front Core", 6, new Color(0.84f, 0.58f, 1f, 0.48f));
 
-        var lowerFill = new GameObject("Pressure Lower Field");
-        lowerFillRenderer = lowerFill.AddComponent<SpriteRenderer>();
-        lowerFillRenderer.sprite = CircleSpriteCache.Square;
-        lowerFillRenderer.color = new Color(0.04f, 0.28f, 0.72f, 0.16f);
-        lowerFillRenderer.sortingOrder = 1;
-
-        var topGlow = new GameObject("Pressure Energy Wave");
-        topGlowRenderer = topGlow.AddComponent<SpriteRenderer>();
-        topGlowRenderer.sprite = CircleSpriteCache.Square;
-        topGlowRenderer.color = new Color(0.32f, 0.9f, 1f, 0.36f);
-        topGlowRenderer.sortingOrder = 5;
+        compressionWaveRenderers = new SpriteRenderer[CompressionWaveCount];
+        for (var i = 0; i < CompressionWaveCount; i++)
+        {
+            compressionWaveRenderers[i] = CreateVisualLayer($"Gravity Compression Ripple {i + 1}", 3, new Color(0.55f, 0.38f, 1f, 0.08f));
+        }
 
         SetPositionImmediately();
         UpdateVisual();
@@ -139,32 +135,66 @@ public sealed class PressureFloor : MonoBehaviour
         transform.localScale = new Vector3(width, SurfaceThickness, 1f);
 
         var fillHeight = Mathf.Max(0.02f, currentY - bottomY);
+        var dangerT = Mathf.InverseLerp(bottomY, dangerY, currentY);
+        var pulse = Mathf.Sin(Time.time * Mathf.Lerp(2.4f, 4.8f, dangerT)) * 0.5f + 0.5f;
+        var threatPulse = Mathf.Sin(Time.time * Mathf.Lerp(4.2f, 7.4f, dangerT)) * 0.5f + 0.5f;
+
         fillRenderer.transform.position = new Vector3(0f, bottomY + fillHeight * 0.5f, 0f);
         fillRenderer.transform.localScale = new Vector3(width, fillHeight, 1f);
 
-        var dangerT = Mathf.InverseLerp(bottomY, dangerY, currentY);
         var lowerHeight = Mathf.Max(0.02f, fillHeight * 0.58f);
         lowerFillRenderer.transform.position = new Vector3(0f, bottomY + lowerHeight * 0.5f, 0f);
         lowerFillRenderer.transform.localScale = new Vector3(width, lowerHeight, 1f);
 
         topGlowRenderer.transform.position = new Vector3(0f, currentY + 0.035f, 0f);
-        topGlowRenderer.transform.localScale = new Vector3(width, 0.065f, 1f);
+        topGlowRenderer.transform.localScale = new Vector3(width, Mathf.Lerp(0.06f, 0.105f, dangerT + pulse * 0.08f), 1f);
+
+        horizonCoreRenderer.transform.position = new Vector3(0f, currentY + 0.055f, 0f);
+        horizonCoreRenderer.transform.localScale = new Vector3(width * Mathf.Lerp(0.92f, 1.02f, pulse), 0.022f, 1f);
+
+        for (var i = 0; i < compressionWaveRenderers.Length; i++)
+        {
+            var wave = compressionWaveRenderers[i];
+            var waveT = (i + 1f) / (compressionWaveRenderers.Length + 1f);
+            var waveY = Mathf.Lerp(bottomY + 0.12f, currentY - 0.1f, waveT);
+            var wavePulse = Mathf.Sin(Time.time * 2.6f + i * 1.4f) * 0.5f + 0.5f;
+            wave.transform.position = new Vector3(0f, waveY, 0f);
+            wave.transform.localScale = new Vector3(width * Mathf.Lerp(0.68f, 0.96f, wavePulse), Mathf.Lerp(0.012f, 0.026f, dangerT), 1f);
+            wave.color = Color.Lerp(
+                new Color(0.52f, 0.32f, 1f, 0.035f + wavePulse * 0.025f),
+                new Color(1f, 0.26f, 0.16f, 0.08f + wavePulse * 0.055f),
+                dangerT);
+        }
 
         fillRenderer.color = Color.Lerp(
-            new Color(0.08f, 0.45f, 0.9f, 0.09f),
-            new Color(0.95f, 0.18f, 0.12f, 0.17f),
+            new Color(0.2f, 0.12f, 0.58f, 0.055f),
+            new Color(0.72f, 0.12f, 0.08f, 0.13f),
             dangerT);
         lowerFillRenderer.color = Color.Lerp(
-            new Color(0.03f, 0.22f, 0.62f, 0.14f),
-            new Color(0.72f, 0.08f, 0.08f, 0.24f),
+            new Color(0.035f, 0.018f, 0.14f, 0.16f),
+            new Color(0.34f, 0.025f, 0.04f, 0.24f),
             dangerT);
         topGlowRenderer.color = Color.Lerp(
-            new Color(0.32f, 0.9f, 1f, 0.34f),
-            new Color(1f, 0.32f, 0.2f, 0.46f),
+            new Color(0.52f, 0.9f, 1f, 0.24f + pulse * 0.08f),
+            new Color(1f, 0.32f, 0.18f, 0.38f + threatPulse * 0.14f),
+            dangerT);
+        horizonCoreRenderer.color = Color.Lerp(
+            new Color(0.84f, 0.58f, 1f, 0.42f + pulse * 0.12f),
+            new Color(1f, 0.72f, 0.36f, 0.6f + threatPulse * 0.16f),
             dangerT);
         surfaceRenderer.color = Color.Lerp(
-            new Color(0.24f, 0.76f, 1f, 0.46f),
-            new Color(1f, 0.25f, 0.16f, 0.68f),
+            new Color(0.42f, 0.22f, 0.84f, 0.26f),
+            new Color(1f, 0.18f, 0.12f, 0.46f),
             dangerT);
+    }
+
+    private static SpriteRenderer CreateVisualLayer(string layerName, int sortingOrder, Color color)
+    {
+        var layer = new GameObject(layerName);
+        var renderer = layer.AddComponent<SpriteRenderer>();
+        renderer.sprite = CircleSpriteCache.Square;
+        renderer.color = color;
+        renderer.sortingOrder = sortingOrder;
+        return renderer;
     }
 }
