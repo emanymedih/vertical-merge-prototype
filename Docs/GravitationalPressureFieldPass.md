@@ -14,8 +14,10 @@ closing the playable space from below.
 - Additional subtle compression ripples sit inside the field.
 - Colors move from water-blue toward purple/cyan gravity, then warmer warning colors
   as the field approaches danger.
-- Merge relief is 15% stronger than the previous mechanical value through a tunable
-  `mergeReliefMultiplier`.
+- Merge relief is controlled through a tunable `mergeReliefMultiplier`, currently
+  reset to `1.0` after playtest feedback.
+- Chain merge relief is strongly dampened after the first merge in the chain so
+  chain reactions cannot make a run feel endless.
 - Relief now animates downward smoothly and adds a short recovery glow.
 - L4+ merge relief can show `Space Recovered`, with cooldown to avoid message spam.
 

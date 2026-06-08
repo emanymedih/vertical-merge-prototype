@@ -95,20 +95,20 @@ public sealed class CosmicBodyVisual : MonoBehaviour
     {
         var gradeT = Mathf.Clamp01((metadata.Level - 1f) / (BallConfig.MaxConfiguredLevel - 1f));
         var visibleGradeT = Mathf.Clamp01((metadata.Level - 3f) / (BallConfig.MaxConfiguredLevel - 3f));
-        var glowColor = Color.Lerp(metadata.GlowColor, Color.white, metadata.Level >= 8 ? 0.14f : 0.04f);
-        var auraAlpha = metadata.Level < 3 ? Mathf.Lerp(0.035f, 0.06f, gradeT) : Mathf.Lerp(0.18f, 0.58f, visibleGradeT);
-        var auraScale = metadata.Level < 3 ? Mathf.Lerp(1.1f, 1.16f, gradeT) : Mathf.Lerp(1.28f, 1.72f, visibleGradeT);
-        var intensity = metadata.Level < 3 ? 0.48f : Mathf.Lerp(1.15f, 2.35f, visibleGradeT);
-        var pulseSpeed = metadata.Level < 3 ? 0.55f : Mathf.Lerp(1.2f, 2.8f, visibleGradeT);
+        var glowColor = Color.Lerp(metadata.GlowColor, Color.white, metadata.Level >= 8 ? 0.08f : 0.02f);
+        var auraAlpha = metadata.Level < 3 ? Mathf.Lerp(0.02f, 0.035f, gradeT) : Mathf.Lerp(0.055f, 0.18f, visibleGradeT);
+        var auraScale = metadata.Level < 3 ? Mathf.Lerp(1.06f, 1.1f, gradeT) : Mathf.Lerp(1.12f, 1.32f, visibleGradeT);
+        var intensity = metadata.Level < 3 ? 0.28f : Mathf.Lerp(0.48f, 0.9f, visibleGradeT);
+        var pulseSpeed = metadata.Level < 3 ? 0.45f : Mathf.Lerp(0.75f, 1.45f, visibleGradeT);
         AddCircle("Grade Aura", Vector2.zero, auraScale, WithAlpha(glowColor, auraAlpha), mainRenderer.sortingOrder - 4, true, intensity, pulseSpeed);
     }
 
     private void AddReadabilityRim(CosmicBodyMetadata metadata)
     {
         var rimColor = Color.Lerp(metadata.GlowColor, Color.white, metadata.Level >= 8 ? 0.18f : 0.08f);
-        var alpha = metadata.Level >= 6 ? 0.32f : 0.22f;
+        var alpha = metadata.Level >= 6 ? 0.2f : 0.16f;
         var gradeT = Mathf.Clamp01((metadata.Level - 1f) / (BallConfig.MaxConfiguredLevel - 1f));
-        AddCircle("Readability Rim", Vector2.zero, 1.045f, WithAlpha(rimColor, alpha), mainRenderer.sortingOrder - 1, true, Mathf.Lerp(0.7f, 1.18f, gradeT), 1.1f + gradeT);
+        AddCircle("Readability Rim", Vector2.zero, 1.035f, WithAlpha(rimColor, alpha), mainRenderer.sortingOrder - 1, true, Mathf.Lerp(0.42f, 0.78f, gradeT), 0.85f + gradeT * 0.6f);
     }
 
     private void AddSpots(Color color, Vector2[] positions, float[] sizes)
@@ -123,7 +123,7 @@ public sealed class CosmicBodyVisual : MonoBehaviour
 
     private void AddGlow(Color color, float alpha, float scale)
     {
-        AddCircle("Body Glow", Vector2.zero, scale, WithAlpha(color, Mathf.Max(alpha, 0.24f)), mainRenderer.sortingOrder - 2, true, 1.25f, 1.6f);
+        AddCircle("Body Glow", Vector2.zero, Mathf.Lerp(1f, scale, 0.62f), WithAlpha(color, Mathf.Clamp(alpha * 0.48f, 0.08f, 0.24f)), mainRenderer.sortingOrder - 2, true, 0.62f, 1.05f);
     }
 
     private void AddCore(Color color, float scale, float alpha, int sortingOffset = 2)

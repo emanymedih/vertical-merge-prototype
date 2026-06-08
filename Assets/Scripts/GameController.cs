@@ -20,6 +20,8 @@ public sealed class GameController : MonoBehaviour
     private const int HelperStarMaxResultLevel = 6;
     private const float SpaceRecoveredMessageCooldownSeconds = 5f;
     private const int SpaceRecoveredMessageMinLevel = 4;
+    private const float ChainSecondReliefScale = 0.28f;
+    private const float ChainThirdPlusReliefScale = 0.12f;
 
     [SerializeField] private float chainWindowSeconds = 1.2f;
     [SerializeField] private float savedMessageCooldownSeconds = 5f;
@@ -247,7 +249,8 @@ public sealed class GameController : MonoBehaviour
         }
 
         SoundManager.PlayMerge(feel);
-        var pressureReliefApplied = pressureFloor != null && pressureFloor.ApplyMergeRelief(nextLevel);
+        var pressureReliefScale = GetPressureReliefScaleForCurrentMerge();
+        var pressureReliefApplied = pressureFloor != null && pressureFloor.ApplyMergeRelief(nextLevel, pressureReliefScale);
         if (!suppressRunProgress)
         {
             OnboardingController.Instance?.RegisterMerge();
@@ -791,6 +794,21 @@ public sealed class GameController : MonoBehaviour
             && pressureReliefApplied
             && mergedLevel >= SpaceRecoveredMessageMinLevel
             && Time.time - lastSpaceRecoveredMessageTime >= SpaceRecoveredMessageCooldownSeconds;
+    }
+
+    private float GetPressureReliefScaleForCurrentMerge()
+    {
+        if (Time.time > chainWindowEndsAt)
+        {
+            return 1f;
+        }
+
+        if (chainMergeCount <= 0)
+        {
+            return 1f;
+        }
+
+        return chainMergeCount == 1 ? ChainSecondReliefScale : ChainThirdPlusReliefScale;
     }
 
     private IEnumerator SavedCheckRoutine()

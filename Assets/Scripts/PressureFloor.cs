@@ -13,7 +13,7 @@ public sealed class PressureFloor : MonoBehaviour
     private const float SurfaceThickness = 0.16f;
     private const int CompressionWaveCount = 4;
 
-    [SerializeField] private float mergeReliefMultiplier = 1.15f;
+    [SerializeField] private float mergeReliefMultiplier = 1f;
     [SerializeField] private float mergeReliefBase = 0.05f;
     [SerializeField] private float mergeReliefPerLevel = 0.012f;
     [SerializeField] private float minMergeRelief = 0.07f;
@@ -88,9 +88,9 @@ public sealed class PressureFloor : MonoBehaviour
         UpdateVisual();
     }
 
-    public bool ApplyMergeRelief(int mergedLevel)
+    public bool ApplyMergeRelief(int mergedLevel, float reliefScale = 1f)
     {
-        var relief = GetMergeRelief(mergedLevel);
+        var relief = GetMergeRelief(mergedLevel) * Mathf.Clamp01(reliefScale);
         var nextY = Mathf.Max(startY, currentY - relief);
         if (nextY >= currentY - 0.001f)
         {
