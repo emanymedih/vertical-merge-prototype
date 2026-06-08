@@ -13,6 +13,14 @@ public sealed class PressureFloor : MonoBehaviour
     private const float SurfaceThickness = 0.16f;
     private const int CompressionWaveCount = 4;
 
+    [SerializeField] private float mergeReliefMultiplier = 1.15f;
+    [SerializeField] private float mergeReliefBase = 0.05f;
+    [SerializeField] private float mergeReliefPerLevel = 0.012f;
+    [SerializeField] private float minMergeRelief = 0.07f;
+    [SerializeField] private float maxMergeRelief = 0.18f;
+    [SerializeField] private float reliefAnimationSeconds = 0.18f;
+    [SerializeField] private float reliefGlowSeconds = 0.34f;
+
     private GameController controller;
     private Rigidbody2D body;
     private BoxCollider2D surfaceCollider;
@@ -31,6 +39,11 @@ public sealed class PressureFloor : MonoBehaviour
     private float initialDelaySeconds;
     private float baseRiseSpeed;
     private float maxRiseSpeed;
+    private bool reliefAnimating;
+    private float reliefStartY;
+    private float reliefTargetY;
+    private float reliefAnimationElapsed;
+    private float reliefGlowUntil;
 
     public float PressureProgress => Mathf.Clamp01(Mathf.InverseLerp(bottomY, dangerY, currentY));
 
@@ -75,12 +88,21 @@ public sealed class PressureFloor : MonoBehaviour
         UpdateVisual();
     }
 
-    public void ApplyMergeRelief(int mergedLevel)
+    public bool ApplyMergeRelief(int mergedLevel)
     {
-        var relief = Mathf.Clamp(0.05f + mergedLevel * 0.012f, 0.07f, 0.18f);
-        currentY = Mathf.Max(startY, currentY - relief);
-        SetPositionImmediately();
-        UpdateVisual();
+        var relief = GetMergeRelief(mergedLevel);
+        var nextY = Mathf.Max(startY, currentY - relief);
+        if (nextY >= currentY - 0.001f)
+        {
+            return false;
+        }
+
+        reliefStartY = currentY;
+        reliefTargetY = nextY;
+        reliefAnimationElapsed = 0f;
+        reliefAnimating = true;
+        reliefGlowUntil = Time.time + reliefGlowSeconds;
+        return true;
     }
 
     private void FixedUpdate()
@@ -93,6 +115,22 @@ public sealed class PressureFloor : MonoBehaviour
         elapsed += Time.fixedDeltaTime;
         if (elapsed < initialDelaySeconds)
         {
+            return;
+        }
+
+        if (reliefAnimating)
+        {
+            reliefAnimationElapsed += Time.fixedDeltaTime;
+            var t = reliefAnimationSeconds <= 0f ? 1f : Mathf.Clamp01(reliefAnimationElapsed / reliefAnimationSeconds);
+            currentY = Mathf.Lerp(reliefStartY, reliefTargetY, Mathf.SmoothStep(0f, 1f, t));
+            if (t >= 1f)
+            {
+                reliefAnimating = false;
+                currentY = reliefTargetY;
+            }
+
+            MoveWithPhysics();
+            UpdateVisual();
             return;
         }
 
@@ -140,6 +178,7 @@ public sealed class PressureFloor : MonoBehaviour
         var dangerT = Mathf.InverseLerp(bottomY, dangerY, currentY);
         var pulse = Mathf.Sin(Time.time * Mathf.Lerp(2.4f, 4.8f, dangerT)) * 0.5f + 0.5f;
         var threatPulse = Mathf.Sin(Time.time * Mathf.Lerp(4.2f, 7.4f, dangerT)) * 0.5f + 0.5f;
+        var reliefGlow = Mathf.Clamp01((reliefGlowUntil - Time.time) / Mathf.Max(0.01f, reliefGlowSeconds));
 
         fillRenderer.transform.position = new Vector3(0f, bottomY + fillHeight * 0.5f, 0f);
         fillRenderer.transform.localScale = new Vector3(width, fillHeight, 1f);
@@ -149,10 +188,10 @@ public sealed class PressureFloor : MonoBehaviour
         lowerFillRenderer.transform.localScale = new Vector3(width, lowerHeight, 1f);
 
         topGlowRenderer.transform.position = new Vector3(0f, currentY + 0.035f, 0f);
-        topGlowRenderer.transform.localScale = new Vector3(width, Mathf.Lerp(0.06f, 0.105f, dangerT + pulse * 0.08f), 1f);
+        topGlowRenderer.transform.localScale = new Vector3(width, Mathf.Lerp(0.06f, 0.105f, dangerT + pulse * 0.08f) + reliefGlow * 0.065f, 1f);
 
         horizonCoreRenderer.transform.position = new Vector3(0f, currentY + 0.055f, 0f);
-        horizonCoreRenderer.transform.localScale = new Vector3(width * Mathf.Lerp(0.92f, 1.02f, pulse), 0.022f, 1f);
+        horizonCoreRenderer.transform.localScale = new Vector3(width * (Mathf.Lerp(0.92f, 1.02f, pulse) + reliefGlow * 0.04f), 0.022f + reliefGlow * 0.018f, 1f);
 
         for (var i = 0; i < compressionWaveRenderers.Length; i++)
         {
@@ -176,18 +215,29 @@ public sealed class PressureFloor : MonoBehaviour
             new Color(0.035f, 0.018f, 0.14f, 0.16f),
             new Color(0.34f, 0.025f, 0.04f, 0.24f),
             dangerT);
-        topGlowRenderer.color = Color.Lerp(
+        var topGlowColor = Color.Lerp(
             new Color(0.52f, 0.9f, 1f, 0.24f + pulse * 0.08f),
             new Color(1f, 0.32f, 0.18f, 0.38f + threatPulse * 0.14f),
             dangerT);
-        horizonCoreRenderer.color = Color.Lerp(
+        topGlowColor = Color.Lerp(topGlowColor, new Color(0.66f, 1f, 0.88f, 0.58f), reliefGlow);
+        topGlowRenderer.color = topGlowColor;
+
+        var horizonCoreColor = Color.Lerp(
             new Color(0.84f, 0.58f, 1f, 0.42f + pulse * 0.12f),
             new Color(1f, 0.72f, 0.36f, 0.6f + threatPulse * 0.16f),
             dangerT);
+        horizonCoreColor = Color.Lerp(horizonCoreColor, new Color(0.92f, 1f, 0.72f, 0.72f), reliefGlow);
+        horizonCoreRenderer.color = horizonCoreColor;
         surfaceRenderer.color = Color.Lerp(
             new Color(0.42f, 0.22f, 0.84f, 0.26f),
             new Color(1f, 0.18f, 0.12f, 0.46f),
             dangerT);
+    }
+
+    private float GetMergeRelief(int mergedLevel)
+    {
+        var currentRelief = Mathf.Clamp(mergeReliefBase + mergedLevel * mergeReliefPerLevel, minMergeRelief, maxMergeRelief);
+        return currentRelief * Mathf.Max(0f, mergeReliefMultiplier);
     }
 
     private static SpriteRenderer CreateVisualLayer(string layerName, int sortingOrder, Color color)

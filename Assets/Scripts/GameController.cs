@@ -18,6 +18,8 @@ public sealed class GameController : MonoBehaviour
     private const int AnomalyEvadeScoreMultiplier = 2;
     private const int HelperStarMaxTargetLevel = 5;
     private const int HelperStarMaxResultLevel = 6;
+    private const float SpaceRecoveredMessageCooldownSeconds = 5f;
+    private const int SpaceRecoveredMessageMinLevel = 4;
 
     [SerializeField] private float chainWindowSeconds = 1.2f;
     [SerializeField] private float savedMessageCooldownSeconds = 5f;
@@ -54,6 +56,7 @@ public sealed class GameController : MonoBehaviour
     private int lastAnnouncedChainCount;
     private float dangerPressure;
     private float lastSavedMessageTime = -999f;
+    private float lastSpaceRecoveredMessageTime = -999f;
     private float runStartedAt;
     private float lastMergeAt;
     private float lastCometOfferedAt = -999f;
@@ -244,7 +247,7 @@ public sealed class GameController : MonoBehaviour
         }
 
         SoundManager.PlayMerge(feel);
-        pressureFloor?.ApplyMergeRelief(nextLevel);
+        var pressureReliefApplied = pressureFloor != null && pressureFloor.ApplyMergeRelief(nextLevel);
         if (!suppressRunProgress)
         {
             OnboardingController.Instance?.RegisterMerge();
@@ -262,6 +265,11 @@ public sealed class GameController : MonoBehaviour
         else if (criticalMerge && !suppressRunProgress)
         {
             gameUi.ShowMomentMessage("Critical Merge!");
+        }
+        else if (ShouldShowSpaceRecovered(pressureReliefApplied, nextLevel, suppressRunProgress))
+        {
+            lastSpaceRecoveredMessageTime = Time.time;
+            gameUi.ShowMomentMessage("Space Recovered");
         }
 
         if (!suppressRunProgress)
@@ -775,6 +783,14 @@ public sealed class GameController : MonoBehaviour
             gameUi.ShowMomentMessage("Chain!");
             SoundManager.Play(SoundEvent.Chain);
         }
+    }
+
+    private bool ShouldShowSpaceRecovered(bool pressureReliefApplied, int mergedLevel, bool suppressRunProgress)
+    {
+        return !suppressRunProgress
+            && pressureReliefApplied
+            && mergedLevel >= SpaceRecoveredMessageMinLevel
+            && Time.time - lastSpaceRecoveredMessageTime >= SpaceRecoveredMessageCooldownSeconds;
     }
 
     private IEnumerator SavedCheckRoutine()

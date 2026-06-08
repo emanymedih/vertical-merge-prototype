@@ -14,12 +14,15 @@ closing the playable space from below.
 - Additional subtle compression ripples sit inside the field.
 - Colors move from water-blue toward purple/cyan gravity, then warmer warning colors
   as the field approaches danger.
+- Merge relief is 15% stronger than the previous mechanical value through a tunable
+  `mergeReliefMultiplier`.
+- Relief now animates downward smoothly and adds a short recovery glow.
+- L4+ merge relief can show `Space Recovered`, with cooldown to avoid message spam.
 
 ## Not Changed
 
 - No pressure timing changes.
 - No pressure rise speed changes.
-- No merge relief changes.
 - No danger line game over changes.
 - No collider or physics behavior changes.
 - No new assets.
@@ -31,5 +34,6 @@ closing the playable space from below.
 3. Confirm balls remain readable behind/above the field.
 4. Confirm the top compression wave is visible but not noisy.
 5. Confirm the warning color intensifies as it approaches danger.
-6. Confirm merges still reduce pressure as before.
+6. Confirm merges reduce pressure a little more clearly than before.
 7. Confirm Game Over timing is unchanged.
+8. Confirm repeated merges cannot move the pressure floor below its starting limit.
