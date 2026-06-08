@@ -69,6 +69,24 @@ public sealed class GameEffects : MonoBehaviour
         PlayConsumeParticles(position);
     }
 
+    public void PlayHelperStarUpgrade(Vector2 position, int level, bool rareUpgrade)
+    {
+        var targetLevel = Mathf.Clamp(level, 2, BallConfig.MaxConfiguredLevel);
+        var coreColor = rareUpgrade ? new Color(1f, 0.96f, 0.58f) : new Color(0.86f, 1f, 0.92f);
+        var ringColor = rareUpgrade ? new Color(1f, 0.74f, 0.26f) : new Color(0.42f, 1f, 0.86f);
+        var duration = rareUpgrade ? 0.34f : 0.27f;
+        var ringScale = rareUpgrade ? 2.9f : 2.35f;
+
+        StartCoroutine(SpecialPulseRoutine(position, targetLevel, coreColor, ringColor, duration, ringScale));
+        StartCoroutine(FloatingMessageRoutine(
+            position + Vector2.up * 0.34f,
+            rareUpgrade ? "Lucky Star!" : "Star Boost!",
+            rareUpgrade ? new Color(1f, 0.9f, 0.38f) : new Color(0.72f, 1f, 0.84f),
+            0.82f));
+        PlayHelperStarSparks(position, rareUpgrade);
+        cameraShake?.Shake(rareUpgrade ? 0.1f : 0.07f, rareUpgrade ? 0.05f : 0.028f);
+    }
+
     public void PlayStressRelief()
     {
         StartCoroutine(FloatingMessageRoutine(new Vector2(0f, 1.1f), "Saved!", new Color(0.72f, 1f, 1f), 0.68f));
@@ -342,6 +360,40 @@ public sealed class GameEffects : MonoBehaviour
 
         particles.Emit(30);
         StartCoroutine(ReturnParticlesRoutine(particles, 0.82f));
+    }
+
+    private void PlayHelperStarSparks(Vector2 position, bool rareUpgrade)
+    {
+        var particles = GetParticles();
+        particles.gameObject.transform.position = position;
+        particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        var main = particles.main;
+        main.playOnAwake = false;
+        main.duration = 0.28f;
+        main.loop = false;
+        main.startLifetime = rareUpgrade ? 0.42f : 0.34f;
+        main.startSpeed = rareUpgrade ? 2.55f : 1.95f;
+        main.startSize = rareUpgrade ? 0.1f : 0.074f;
+        main.startColor = rareUpgrade ? new Color(1f, 0.86f, 0.28f, 1f) : new Color(0.68f, 1f, 0.86f, 0.94f);
+        main.maxParticles = rareUpgrade ? 34 : 24;
+
+        var emission = particles.emission;
+        emission.enabled = false;
+
+        var velocityLimit = particles.limitVelocityOverLifetime;
+        velocityLimit.enabled = true;
+        velocityLimit.limit = 2.9f;
+        velocityLimit.dampen = 0.66f;
+        velocityLimit.drag = rareUpgrade ? 1.65f : 1.35f;
+
+        var shape = particles.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 0.14f;
+
+        particles.Emit(rareUpgrade ? 30 : 20);
+        StartCoroutine(ReturnParticlesRoutine(particles, rareUpgrade ? 0.72f : 0.62f));
     }
 
     private float GetFlashScale(int level)

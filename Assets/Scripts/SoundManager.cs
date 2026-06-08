@@ -21,7 +21,9 @@ public enum SoundEvent
     StressHeartbeat,
     StressRelief,
     AnomalyTick,
-    AnomalyEvaded
+    AnomalyEvaded,
+    HelperStarAppear,
+    HelperStarUpgrade
 }
 
 public sealed class SoundManager : MonoBehaviour

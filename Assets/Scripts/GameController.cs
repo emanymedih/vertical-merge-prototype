@@ -16,6 +16,8 @@ public sealed class GameController : MonoBehaviour
     private const float CometSpawnChance = 0.1f;
     private const float CometMinRunSeconds = 45f;
     private const int AnomalyEvadeScoreMultiplier = 2;
+    private const int HelperStarMaxTargetLevel = 5;
+    private const int HelperStarMaxResultLevel = 6;
 
     [SerializeField] private float chainWindowSeconds = 1.2f;
     [SerializeField] private float savedMessageCooldownSeconds = 5f;
@@ -346,6 +348,84 @@ public sealed class GameController : MonoBehaviour
         Haptics.HeavyImpact();
         gameUi.ShowMomentMessage("Comet Save!");
         UpdateUi();
+    }
+
+    public bool TryApplyHelperStarUpgrade(Ball target, int levelDelta, Vector2 sourcePosition, bool rareUpgrade)
+    {
+        if (IsGameOver || IsOpeningDemoActive || target == null || target.IsMerging || target.IsPreMerging)
+        {
+            return false;
+        }
+
+        if (target.Level < 2 || target.Level > HelperStarMaxTargetLevel)
+        {
+            return false;
+        }
+
+        var nextLevel = Mathf.Min(target.Level + Mathf.Max(1, levelDelta), HelperStarMaxResultLevel, BallConfig.MaxConfiguredLevel);
+        if (nextLevel <= target.Level)
+        {
+            return false;
+        }
+
+        var position = (Vector2)target.transform.position;
+        if (target.IsAnomalyTargeted)
+        {
+            CosmicAnomalyEventController.Instance?.RegisterTargetDisrupted(target);
+        }
+
+        target.MarkMerging();
+        Destroy(target.gameObject);
+
+        var upgradedBall = SpawnBall(nextLevel, position);
+        upgradedBall.PlayMergeBirth(nextLevel);
+
+        if (nextLevel > highestMergedLevel)
+        {
+            highestMergedLevel = nextLevel;
+            if (nextLevel >= 3 && firstPlanetAt < 0f)
+            {
+                firstPlanetAt = Time.time - runStartedAt;
+            }
+        }
+
+        var newLargestRecordThisUpgrade = nextLevel > BestLargestLevel;
+        if (newLargestRecordThisUpgrade)
+        {
+            BestLargestLevel = nextLevel;
+            newBestLargestThisRun = true;
+            PlayerPrefs.SetInt(BestLargestBallKey, BestLargestLevel);
+            PlayerPrefs.Save();
+        }
+
+        if (rareUpgrade && nextLevel > 2)
+        {
+            MarkLevelDiscoveredSilently(nextLevel - 1);
+        }
+
+        var discoveredForFirstTime = TryShowDiscovery(nextLevel);
+        effects.PlayHelperStarUpgrade(position, nextLevel, rareUpgrade);
+        pressureFloor?.ApplyMergeRelief(Mathf.Clamp(nextLevel, 2, 5));
+
+        SoundManager.Play(SoundEvent.HelperStarUpgrade);
+        Haptics.Play(rareUpgrade ? HapticFeedbackType.HeavyImpact : HapticFeedbackType.LightImpact);
+
+        if (newLargestRecordThisUpgrade)
+        {
+            gameUi.ShowMomentMessage("New Largest Record!");
+            SoundManager.Play(SoundEvent.NewRecord);
+        }
+        else if (rareUpgrade)
+        {
+            gameUi.ShowMomentMessage("Lucky Star!");
+        }
+        else if (discoveredForFirstTime && nextLevel >= 5)
+        {
+            SoundManager.Play(SoundEvent.NewRecord);
+        }
+
+        UpdateUi();
+        return true;
     }
 
     public void GrantAnomalyRescueBonus(Vector2 position, int targetLevel)
